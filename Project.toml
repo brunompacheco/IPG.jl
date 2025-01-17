@@ -1,0 +1,4 @@
+name = "IPG"
+uuid = "2f50017d-522a-4a0a-b317-915d5df6b243"
+authors = ["Bruno Machado Pacheco <mpacheco.bruno@gmail.com>"]
+version = "0.1.0"
