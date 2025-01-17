@@ -2,3 +2,6 @@ name = "IPG"
 uuid = "2f50017d-522a-4a0a-b317-915d5df6b243"
 authors = ["Bruno Machado Pacheco <mpacheco.bruno@gmail.com>"]
 version = "0.1.0"
+
+[deps]
+NormalGames = "4dc104ef-1e0c-4a09-93ea-14ddc8e86204"
