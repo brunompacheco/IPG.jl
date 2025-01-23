@@ -2,6 +2,8 @@ module IPG
 
 using NormalGames
 
+export Strategies, np, QuadraticPayoff, payoff, Game
+
 
 "Each player's set of strategies is defined by `Ap * xp <= bp`."
 struct Strategies
@@ -24,6 +26,10 @@ function Strategies(ap::Vector{<:Real}, bp::Real, Bp::Integer)
     return Strategies(ones(1,length(ap)) .* ap, [bp], Bp)
 end
 
+function np(Xp::Strategies)
+    return size(Xp.Ap,1)
+end
+
 # TODO: create an abstract Payoff type
 "Payoff function of player `p` with quadratic bilateral (pairwise) interactions."
 struct QuadraticPayoff
@@ -35,33 +41,23 @@ function QuadraticPayoff(cp::Real, Qp::Vector{<:Real})
     return QuadraticPayoff([cp], [qpk * ones(1,1) for qpk in Qp])
 end
 
-"Compute the payoff of player `p` given strategies x."
-function payoff(Πp::QuadraticPayoff, x::Vector{<:Vector{<:Real}}, p::Integer)
-    return (
-        Πp.cp' * x[p]
-        - 0.5 * x[p]' * Πp.Qp[p] * x[p]
-        + sum([x[k]' * Πp.Qp[k] * x[p] for k in 1:length(x) if k != p])
-    )
-end
-function payoff(Πp::QuadraticPayoff, x::Vector{<:Real}, p::Integer)
-    return payoff(Πp, [[xp] for xp in x], p)
+"Compute each component of the payoff of player `p` with respect to player `k`."
+function bilateral_payoff(Πp::QuadraticPayoff, p::Integer, xp::Vector{<:Real}, k::Integer, xk::Vector{<:Real})
+    if p == k
+        return Πp.cp' * xp - 0.5 * xp' * Πp.Qp[p] * xp
+    else
+        return xk' * Πp.Qp[k] * xp
+    end
 end
 
-struct Player
-    Xp::Strategies
-    Πp::QuadraticPayoff
-end
-"Number of variables of player p."
-function np(P::Player)
-    return np(P.Xp)
-end
-function np(Xp::Strategies)
-    return size(Xp.Ap,1)
+"Compute the payoff of player `p` given strategies x."
+function payoff(Π::Vector{QuadraticPayoff}, x::Vector{<:Vector{<:Real}}, p::Integer)
+    return sum([bilateral_payoff(Π[p], p, x[p], k, x[k]) for k in 1:length(x)])
 end
 
 struct Game
-    M::Vector{Player}
+    X::Vector{Strategies}
+    Π::Vector{QuadraticPayoff}
 end
-
 
 end # module IPG
