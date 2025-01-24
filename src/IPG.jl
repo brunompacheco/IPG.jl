@@ -1,6 +1,7 @@
 module IPG
 
 using NormalGames
+using JuMP
 
 export Strategies, np, QuadraticPayoff, payoff, Game
 
@@ -42,7 +43,7 @@ function QuadraticPayoff(cp::Real, Qp::Vector{<:Real})
 end
 
 "Compute each component of the payoff of player `p` with respect to player `k`."
-function bilateral_payoff(Πp::QuadraticPayoff, p::Integer, xp::Vector{<:Real}, k::Integer, xk::Vector{<:Real})
+function bilateral_payoff(Πp::QuadraticPayoff, p::Integer, xp::Vector{<:Union{Real,VariableRef}}, k::Integer, xk::Vector{<:Real})
     if p == k
         return Πp.cp' * xp - 0.5 * xp' * Πp.Qp[p] * xp
     else
