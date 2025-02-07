@@ -1,4 +1,7 @@
 
+include("SampledGame.jl")
+include("PlayerOrder.jl")
+
 "[DeviationReaction] Compute `player`'s best response to the mixed strategy profile `σp`."
 function best_response(player::Player, σ::Vector{DiscreteMixedStrategy}, optimizer_factory=nothing)
     if ~isnothing(optimizer_factory)
@@ -77,7 +80,8 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, d
         # Find a deviation from `σ` for some player and add it to the sample. If no deviation is
         # found, `σ` is a equilibrium for the game, so we stop.
 
-        payoff_improvement, p, new_xp = find_deviation(players, σ_S, optimizer_factory, dev_tol=dev_tol)
+        player_order = get_player_order(players, iter, Σ_S, payoff_improvements)
+        payoff_improvement, p, new_xp = find_deviation(players, σ_S, optimizer_factory, player_order=player_order, dev_tol=dev_tol)
         push!(payoff_improvements, payoff_improvement)
 
         if payoff_improvement < dev_tol
