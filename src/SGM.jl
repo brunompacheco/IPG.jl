@@ -11,7 +11,7 @@ function get_polymatrix(players::Vector{Player}, S_X::Vector{<:Vector{<:Vector{<
 
             polymatrix[p,k] = zeros(length(S_X[p]), length(S_X[k]))
 
-            if k != p  # fills only the diagonal
+            if k != p
                 for i_p in 1:length(S_X[p])
                     for i_k in 1:length(S_X[k])
                         polymatrix[p,k][i_p,i_k] = (
@@ -27,24 +27,73 @@ function get_polymatrix(players::Vector{Player}, S_X::Vector{<:Vector{<:Vector{<
     return polymatrix
 end
 
-"[SearchNE] Compute a (mixed) nash equilibrium for the sampled game."
-function solve_sampled_game(players::Vector{Player}, S_X::Vector{<:Vector{<:Vector{<:Real}}})::Vector{DiscreteMixedStrategy}
-    # build normal form game from sample of strategies
-    G = NormalGames.NormalGame(length(players), length.(S_X), get_polymatrix(players, S_X))
-    # TODO: the polymatrix doesnt need to be recomputed every time, we can just update it
-    # This will probably require a new struct (maybe `SampledGame`) that holds the samples
-    # and the normal game
+"Wrapper for NormalGames.NormalGame that includes the sample of strategies."
+mutable struct SampledGame
+    S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
+    normal_game::NormalGames.NormalGame
+end
+function SampledGame(players::Vector{Player}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+    payoff_polymatrix = get_polymatrix(players, S_X)
+    normal_game = NormalGames.NormalGame(length(players), length.(S_X), payoff_polymatrix)
 
-    _, _, NE_mixed = NormalGames.NashEquilibriaPNS(G,false,false,false)
+    return SampledGame(S_X, normal_game)
+end
+
+"[SearchNE] Compute a (mixed) nash equilibrium for the sampled game."
+function solve(sampled_game::SampledGame)::Vector{DiscreteMixedStrategy}
+    _, _, NE_mixed = NormalGames.NashEquilibriaPNS(sampled_game.normal_game, false, false, false)
     # each element in NE_mixed is a mixed NE, represented as a vector of probabilities in 
     # the same shape as S_X
 
     NE_mixed = NE_mixed[1]  # take the first NE
 
     # build mixed strategy profile from the NE of the normal game
-    σ = [IPG.DiscreteMixedStrategy(NE_mixed[player.p], S_X[player.p]) for player in players]
+    σ = [IPG.DiscreteMixedStrategy(probs_p, S_Xp) for (probs_p, S_Xp) in zip(NE_mixed, sampled_game.S_X)]
 
     return σ
+end
+
+function add_new_strategy!(sampled_game::SampledGame, players::Vector{Player}, new_xp::Vector{<:Real}, p::Integer)
+    # first part is easy, just add the new strategy to the set
+    push!(sampled_game.S_X[p], new_xp)
+
+    n = sampled_game.normal_game.n
+    strat = sampled_game.normal_game.strat
+    polymatrix = sampled_game.normal_game.polymatrix
+
+    strat[p] += 1
+
+    # now we need to update the normal game (polymatrix)
+    for (p1, p2) in keys(polymatrix)
+        if p1 == p2 == p
+            # add new row to polymatrix to store the utilities wrt the new strategy
+            polymatrix[p,p] = zeros(strat[p], strat[p])
+        elseif (p1 != p) & (p2 == p)
+            # add new column to polymatrix to store the utilities wrt the new strategy
+            polymatrix[p1,p] = hcat(polymatrix[p1,p], zeros(strat[p1], 1))
+
+            for i in 1:strat[p1]
+                # compute utility of player `p1` using strategy `i` against the new strategy of player `p`
+                polymatrix[p1,p][i,end] = (
+                    IPG.bilateral_payoff(players[p1], sampled_game.S_X[p1][i], players[p], new_xp)
+                    + IPG.bilateral_payoff(players[p1], sampled_game.S_X[p1][i], players[p1], sampled_game.S_X[p1][i])
+                )
+            end
+        elseif (p1 == p) & (p2 != p)
+            # add new row to polymatrix to store the utilities wrt the new strategy
+            polymatrix[p,p2] = vcat(polymatrix[p,p2], zeros(1, strat[p2]))
+
+            for i in 1:strat[p2]
+                # compute utility of player `p1` using strategy `i` against the new strategy of player `p`
+                polymatrix[p,p2][end,i] = (
+                    IPG.bilateral_payoff(players[p], new_xp, players[p2], sampled_game.S_X[p2][i])
+                    + IPG.bilateral_payoff(players[p], new_xp, players[p], new_xp)
+                )
+            end
+        end
+    end
+
+    sampled_game.normal_game = NormalGames.NormalGame(n, strat, polymatrix)
 end
 
 "[DeviationReaction] Compute `player`'s best response to the mixed strategy profile `σp`."
@@ -99,29 +148,32 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, d
 
     S_X = [Vector{Vector{Float64}}() for _ in players]
     for player in players
-        initial_strat = start_value.(all_variables(player.Xp))
+        xp_init = start_value.(all_variables(player.Xp))
 
-        if nothing in initial_strat
+        if nothing in xp_init
             # TODO: if `initial_sol` is just a partial solution, I could fix its values
             # before solving the feasibility problem.
-            initial_strat = find_feasible_pure_strategy(player, optimizer_factory)
+            xp_init = find_feasible_pure_strategy(player, optimizer_factory)
         end
 
-        push!(S_X[player.p], initial_strat)
+        push!(S_X[player.p], xp_init)
     end
+    sampled_game = SampledGame(players, S_X)
 
-    Σ_S = Vector{Vector{DiscreteMixedStrategy}}()
+    Σ_S = Vector{Vector{DiscreteMixedStrategy}}()  # candidate equilibria
     payoff_improvements = Vector{Float64}()
-    for _ in 1:max_iter
+    for iter in 1:max_iter
         ### Step 2: Solve sampled game
         # A (mixed) Nash equilibrium is computed for the sampled game. Note that it is a
         # feasible strategy for the original game, but not necessarily a equilibrium.
-        σ_S = solve_sampled_game(players, S_X)
+
+        σ_S = solve(sampled_game)
         push!(Σ_S, σ_S)
 
         ### Step 3: Termination
         # Find a deviation from `σ` for some player and add it to the sample. If no deviation is
         # found, `σ` is a equilibrium for the game, so we stop.
+
         payoff_improvement, p, new_xp = find_deviation(players, σ_S, optimizer_factory, dev_tol=dev_tol)
         push!(payoff_improvements, payoff_improvement)
 
@@ -130,10 +182,13 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, d
         end
 
         ### Step 4: Generation of next sampled game
-        # IMPORTANT TODO: record deviations!
-        push!(S_X[p], new_xp)
+        # TODO: record deviations
+        add_new_strategy!(sampled_game, players, new_xp, p)
+
+        if iter == max_iter
+            println("Maximum number of iterations reached!")
+        end
     end
-    println("Maximum number of iterations reached!")
 
     # TODO: add verbose option to return all intermediate σ
     return Σ_S, payoff_improvements
