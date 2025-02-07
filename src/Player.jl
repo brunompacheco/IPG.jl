@@ -36,6 +36,7 @@ function payoff(player::Player, σ::Vector{DiscreteMixedStrategy})
     return expected_value(_payoff, σ)
 end
 
+"Solve the feasibility problem for a player, returning a feasible strategy."
 function find_feasible_pure_strategy(player::Player, optimizer_factory=nothing)
     if ~isnothing(optimizer_factory)
         set_optimizer(player.Xp, optimizer_factory)
@@ -50,6 +51,7 @@ function find_feasible_pure_strategy(player::Player, optimizer_factory=nothing)
     return value.(all_variables(player.Xp))
 end
 
+"Solve the feasibility problem of all players, returning a feasible profile."
 function find_feasible_pure_profile(players::Vector{Player}, optimizer_factory=nothing)
     return [find_feasible_pure_strategy(player, optimizer_factory) for player in players]
 end
