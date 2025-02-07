@@ -22,6 +22,11 @@ struct DiscreteMixedStrategy
     end
 end
 
+"Check whether the mixed strategy is actually pure."
+function is_pure(σp::DiscreteMixedStrategy)
+    return length(σp.probs) == 1
+end
+
 "Compute the expected value of a function given a discrete mixed strategy."
 function expected_value(f::Function, σp::DiscreteMixedStrategy)
     expectation = 0
