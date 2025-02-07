@@ -70,8 +70,8 @@ function best_response(player::Player, σ::Vector{DiscreteMixedStrategy}, optimi
     return value.(xp)
 end
 
-"Find a deviation from `σ` or return -1 if none is found (i.e., σ is a mixed NE)."
-function find_deviation(players::Vector{Player}, σ::Vector{DiscreteMixedStrategy}, optimizer_factory=nothing; player_order=nothing, dev_tol=1e-3)  # TODO: expose tolerance parameter
+"Find a deviation from mixed profile `σ`."
+function find_deviation(players::Vector{Player}, σ::Vector{DiscreteMixedStrategy}, optimizer_factory=nothing; player_order=nothing, dev_tol=1e-3)::Tuple{Float64,Int64,Union{Nothing,Vector{Float64}}}
     if isnothing(player_order)
         player_order = 1:length(players)
     end
@@ -82,15 +82,16 @@ function find_deviation(players::Vector{Player}, σ::Vector{DiscreteMixedStrateg
 
         new_σ = copy(σ)
         new_σ[p] = DiscreteMixedStrategy([1], [new_x_p])
-        if payoff(player, σ) + dev_tol < payoff(player, new_σ)
-            return p, new_x_p
+        payoff_improvement = payoff(player, new_σ) - payoff(player, σ)
+        if payoff_improvement > dev_tol
+            return payoff_improvement, p, new_x_p
         end
     end
 
-    return -1, nothing
+    return 0.0, -1, nothing
 end
 
-function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100)
+function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, dev_tol=1e-3)
     ### Step 1: Initialization
     # The sampled game (sample of feasible strategies) is built from warm-start values from
     # the strategy space of each player or, in case there is none, a feasibility problem is
@@ -109,26 +110,31 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100)
         push!(S_X[player.p], initial_strat)
     end
 
-    for iter in 1:max_iter
+    Σ_S = Vector{Vector{DiscreteMixedStrategy}}()
+    payoff_improvements = Vector{Float64}()
+    for _ in 1:max_iter
         ### Step 2: Solve sampled game
         # A (mixed) Nash equilibrium is computed for the sampled game. Note that it is a
         # feasible strategy for the original game, but not necessarily a equilibrium.
-        σ = solve_sampled_game(players, S_X)
+        σ_S = solve_sampled_game(players, S_X)
+        push!(Σ_S, σ_S)
 
         ### Step 3: Termination
         # Find a deviation from `σ` for some player and add it to the sample. If no deviation is
         # found, `σ` is a equilibrium for the game, so we stop.
-        p, new_xp = find_deviation(players, σ, optimizer_factory)
+        payoff_improvement, p, new_xp = find_deviation(players, σ_S, optimizer_factory, dev_tol=dev_tol)
+        push!(payoff_improvements, payoff_improvement)
 
-        if p == -1
-            # TODO: add verbose option to return all intermediate σ
-            return σ
+        if payoff_improvement < dev_tol
+            break
         end
 
         ### Step 4: Generation of next sampled game
         # IMPORTANT TODO: record deviations!
         push!(S_X[p], new_xp)
     end
+    println("Maximum number of iterations reached!")
 
-    return false
+    # TODO: add verbose option to return all intermediate σ
+    return Σ_S, payoff_improvements
 end
