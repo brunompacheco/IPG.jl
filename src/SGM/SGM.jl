@@ -67,7 +67,7 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, d
     sampled_game = SampledGame(players, S_X)
 
     Σ_S = Vector{Vector{DiscreteMixedStrategy}}()  # candidate equilibria
-    payoff_improvements = Vector{Float64}()
+    payoff_improvements = Vector{Tuple{Integer,Float64}}()
     for iter in 1:max_iter
         ### Step 2: Solve sampled game
         # A (mixed) Nash equilibrium is computed for the sampled game. Note that it is a
@@ -82,7 +82,7 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, d
 
         player_order = get_player_order(players, iter, Σ_S, payoff_improvements)
         payoff_improvement, p, new_xp = find_deviation(players, σ_S, optimizer_factory, player_order=player_order, dev_tol=dev_tol)
-        push!(payoff_improvements, payoff_improvement)
+        push!(payoff_improvements, (p, payoff_improvement))
 
         if payoff_improvement < dev_tol
             break
