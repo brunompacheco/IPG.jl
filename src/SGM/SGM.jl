@@ -3,35 +3,7 @@ include("SampledGame.jl")
 include("PlayerOrder.jl")
 include("DeviationReaction.jl")
 
-"[DeviationReaction] Compute `player`'s best response to the mixed strategy profile `σp`."
-function best_response(player::Player, σ::Vector{DiscreteMixedStrategy}, optimizer_factory=nothing)
-    if ~isnothing(optimizer_factory)
-        set_optimizer(player.Xp, optimizer_factory)
-    end
-
-    xp = all_variables(player.Xp)
-
-    # TODO: No idea why this doesn't work
-    # @objective(model, Max, sum([IPG.bilateral_payoff(Πp, p, xp, k, σ[k]) for k in 1:m]))
-
-    obj = QuadExpr()
-    for k in 1:length(σ)
-        obj += IPG.bilateral_payoff(player.Πp, player.p, xp, k, σ[k])
-    end
-    @objective(player.Xp, Max, obj)
-
-    set_silent(player.Xp)
-    optimize!(player.Xp)
-
-    return value.(xp)
-end
-
-function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, dev_tol=1e-3)
-    ### Step 1: Initialization
-    # The sampled game (sample of feasible strategies) is built from warm-start values from
-    # the strategy space of each player or, in case there is none, a feasibility problem is
-    # solved
-
+function initialize_strategies(players::Vector{Player})
     S_X = [Vector{Vector{Float64}}() for _ in players]
     for player in players
         xp_init = start_value.(all_variables(player.Xp))

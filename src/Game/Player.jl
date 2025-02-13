@@ -36,6 +36,29 @@ function payoff(player::Player, σ::Vector{DiscreteMixedStrategy})
     return expected_value(_payoff, σ)
 end
 
+"Compute `player`'s best response to the mixed strategy profile `σp`."
+function best_response(player::Player, σ::Vector{DiscreteMixedStrategy}, optimizer_factory=nothing)
+    if ~isnothing(optimizer_factory)
+        set_optimizer(player.Xp, optimizer_factory)
+    end
+
+    xp = all_variables(player.Xp)
+
+    # TODO: No idea why this doesn't work
+    # @objective(model, Max, sum([IPG.bilateral_payoff(Πp, p, xp, k, σ[k]) for k in 1:m]))
+
+    obj = QuadExpr()
+    for k in 1:length(σ)
+        obj += IPG.bilateral_payoff(player.Πp, player.p, xp, k, σ[k])
+    end
+    @objective(player.Xp, Max, obj)
+
+    set_silent(player.Xp)
+    optimize!(player.Xp)
+
+    return value.(xp)
+end
+
 "Solve the feasibility problem for a player, returning a feasible strategy."
 function find_feasible_pure_strategy(player::Player, optimizer_factory=nothing)
     if ~isnothing(optimizer_factory)
