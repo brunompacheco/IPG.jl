@@ -39,20 +39,6 @@ function SampledGame(players::Vector{Player}, S_X::Vector{<:Vector{<:Vector{<:Re
     return SampledGame(S_X, normal_game)
 end
 
-"[SearchNE] Compute a (mixed) nash equilibrium for the sampled game."
-function solve(sampled_game::SampledGame)::Vector{DiscreteMixedStrategy}
-    _, _, NE_mixed = NormalGames.NashEquilibriaPNS(sampled_game.normal_game, false, false, false)
-    # each element in NE_mixed is a mixed NE, represented as a vector of probabilities in 
-    # the same shape as S_X
-
-    NE_mixed = NE_mixed[1]  # take the first NE
-
-    # build mixed strategy profile from the NE of the normal game
-    σ = [IPG.DiscreteMixedStrategy(probs_p, S_Xp) for (probs_p, S_Xp) in zip(NE_mixed, sampled_game.S_X)]
-
-    return σ
-end
-
 function add_new_strategy!(sampled_game::SampledGame, players::Vector{Player}, new_xp::Vector{<:Real}, p::Integer)
     # first part is easy, just add the new strategy to the set
     push!(sampled_game.S_X[p], new_xp)
@@ -95,3 +81,5 @@ function add_new_strategy!(sampled_game::SampledGame, players::Vector{Player}, n
 
     sampled_game.normal_game = NormalGames.NormalGame(n, strat, polymatrix)
 end
+
+include("SearchNE.jl")

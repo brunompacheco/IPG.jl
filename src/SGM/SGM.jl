@@ -1,5 +1,5 @@
 
-include("SampledGame.jl")
+include("SampledGame/SampledGame.jl")
 include("PlayerOrder.jl")
 include("DeviationReaction.jl")
 include("Initialization.jl")
