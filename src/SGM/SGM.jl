@@ -2,20 +2,15 @@
 include("SampledGame.jl")
 include("PlayerOrder.jl")
 include("DeviationReaction.jl")
+include("Initialization.jl")
 
-function initialize_strategies(players::Vector{Player})
-    S_X = [Vector{Vector{Float64}}() for _ in players]
-    for player in players
-        xp_init = start_value.(all_variables(player.Xp))
+function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, dev_tol=1e-3)
+    ### Step 1: Initialization
+    # The sampled game (sample of feasible strategies) is built from warm-start values from
+    # the strategy space of each player or, in case there is none, a feasibility problem is
+    # solved
 
-        if nothing in xp_init
-            # TODO: if `initial_sol` is just a partial solution, I could fix its values
-            # before solving the feasibility problem.
-            xp_init = find_feasible_pure_strategy(player, optimizer_factory)
-        end
-
-        push!(S_X[player.p], xp_init)
-    end
+    S_X = initialize_strategies(players, optimizer_factory)
     sampled_game = SampledGame(players, S_X)
 
     Σ_S = Vector{Vector{DiscreteMixedStrategy}}()  # candidate equilibria
