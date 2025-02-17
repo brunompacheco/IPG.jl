@@ -12,4 +12,44 @@ using Test
         @test expected_value(identity, σp) == [0.5, 0.5]
         @test expected_value(sum, σp) == 1.0
     end
+
+    @testset "Example 5.3" begin
+        using Gurobi
+        const global GRB_ENV = Gurobi.Env()
+
+        # guarantee reproducibility (always start with player 1)
+        IPG.get_player_order = IPG.get_player_order_fixed_descending
+
+        P1 = Player(QuadraticPayoff(0, [2, 1]), 1)
+        @variable(P1.Xp, x1, start=10.0)
+        @constraint(P1.Xp, x1 >= 0)
+
+        P2 = Player(QuadraticPayoff(0, [1, 2]), 2)
+        @variable(P2.Xp, x2, start=10.0)
+        @constraint(P2.Xp, x2 >= 0)
+
+        Σ, payoff_improvements = IPG.SGM([P1, P2], () -> Gurobi.Optimizer(GRB_ENV), max_iter=5);
+        
+        @test [σ[1].supp for σ in Σ] == [
+            [[10.0]],
+            [[10.0]],
+            [[2.5]],
+            [[2.5]],
+            [[0.625]]
+        ]
+        @test [σ[2].supp for σ in Σ] == [
+            [[10.0]],
+            [[5.0]],
+            [[5.0]],
+            [[1.25]],
+            [[1.25]]
+        ]
+        @test all(payoff_improvements .== [
+            (2, 25.0)
+            (1, 56.25)
+            (2, 14.0625)
+            (1, 3.515625)
+            (2, 0.87890625)
+        ])
+    end
 end
