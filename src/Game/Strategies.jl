@@ -29,9 +29,9 @@ end
 
 "Compute the expected value of a function given a discrete mixed strategy."
 function expected_value(f::Function, σp::DiscreteMixedStrategy)
-    expectation = 0
+    expectation = 0 .* f(σp.supp[1])  # guess the output type of f
     for (prob, xp) in zip(σp.probs, σp.supp)
-        expectation += prob * f(xp)
+        expectation += prob .* f(xp)
     end
 
     return expectation
