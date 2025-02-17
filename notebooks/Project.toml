@@ -1,0 +1,6 @@
+[deps]
+Gurobi = "2e9cd046-0924-5485-92f1-d5272153d98b"
+IPG = "2f50017d-522a-4a0a-b317-915d5df6b243"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+NormalGames = "4dc104ef-1e0c-4a09-93ea-14ddc8e86204"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"

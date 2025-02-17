@@ -36,7 +36,7 @@ julia> Σ[end]
  DiscreteMixedStrategy([1.0], [[0.625]])
 
 ```
-Further details in [`example-5.3.ipynb`](example-5.3.ipynb).
+Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
 
 ## Customization
 
