@@ -14,7 +14,8 @@ permissions:
 
 jobs:
   test:
-    runs-on: Tests
+    name: Tests
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         julia-version: ['1']
