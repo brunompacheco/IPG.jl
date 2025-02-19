@@ -1,3 +1,5 @@
+[![Tests badge](https://github.com/brunompacheco/IPG.jl/actions/workflows/tests.yml/badge.svg)](https://github.com/brunompacheco/IPG.jl/actions/workflows/tests.yml)
+
 # Integer Programming Games
 
 Implementation of the sampled generation method (SGM) for equilibria computation of integer programming games (IPGs). See:
