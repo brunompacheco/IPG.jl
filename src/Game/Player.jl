@@ -17,6 +17,16 @@ function Player(Πp::AbstractPayoff, p::Integer)
     return Player(Model(), Πp, p)
 end
 
+"Check whether an optimizer has already been set for player."
+function has_optimizer(player::Player)
+    return ~(backend(player.Xp).state == JuMP.MOIU.NO_OPTIMIZER)
+end
+
+"Define the optimizer for player."
+function set_optimizer(player::Player, optimizer_factory)
+    JuMP.set_optimizer(player.Xp, optimizer_factory)
+end
+
 "Compute the utility that `player_p` receives from `player_k` when they play, resp., `xp` and `xk`."
 function bilateral_payoff(player_p::Player, xp::Vector{<:Union{Real,VariableRef}}, player_k::Player, xk::Vector{<:Real})
     return bilateral_payoff(player_p.Πp, player_p.p, xp, player_k.p, xk)
@@ -37,11 +47,7 @@ function payoff(player::Player, σ::Vector{DiscreteMixedStrategy})
 end
 
 "Compute `player`'s best response to the mixed strategy profile `σp`."
-function best_response(player::Player, σ::Vector{DiscreteMixedStrategy}, optimizer_factory=nothing)
-    if ~isnothing(optimizer_factory)
-        set_optimizer(player.Xp, optimizer_factory)
-    end
-
+function best_response(player::Player, σ::Vector{DiscreteMixedStrategy})
     xp = all_variables(player.Xp)
 
     # TODO: No idea why this doesn't work
@@ -51,7 +57,9 @@ function best_response(player::Player, σ::Vector{DiscreteMixedStrategy}, optimi
     for k in 1:length(σ)
         obj += IPG.bilateral_payoff(player.Πp, player.p, xp, k, σ[k])
     end
-    @objective(player.Xp, Max, obj)
+    # I don't know why, but it was raising an error without changing the sense
+    set_objective_sense(player.Xp, JuMP.MOI.FEASIBILITY_SENSE)
+    @objective(player.Xp, JuMP.MOI.MAX_SENSE, obj)
 
     set_silent(player.Xp)
     optimize!(player.Xp)
@@ -60,13 +68,8 @@ function best_response(player::Player, σ::Vector{DiscreteMixedStrategy}, optimi
 end
 
 "Solve the feasibility problem for a player, returning a feasible strategy."
-function find_feasible_pure_strategy(player::Player, optimizer_factory=nothing)
-    if ~isnothing(optimizer_factory)
-        set_optimizer(player.Xp, optimizer_factory)
-    end
-
-    # it is simply a feasibility problem
-    @objective(player.Xp, Min, 0)
+function find_feasible_pure_strategy(player::Player)
+    @objective(player.Xp, JuMP.MOI.FEASIBILITY_SENSE, 0)
 
     set_silent(player.Xp)
     optimize!(player.Xp)
@@ -75,6 +78,6 @@ function find_feasible_pure_strategy(player::Player, optimizer_factory=nothing)
 end
 
 "Solve the feasibility problem of all players, returning a feasible profile."
-function find_feasible_pure_profile(players::Vector{Player}, optimizer_factory=nothing)
-    return [find_feasible_pure_strategy(player, optimizer_factory) for player in players]
+function find_feasible_pure_profile(players::Vector{Player})
+    return [find_feasible_pure_strategy(player) for player in players]
 end

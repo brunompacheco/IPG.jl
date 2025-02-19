@@ -28,7 +28,7 @@ x2
 julia> @constraint(player_2.Xp, x2 >= 0)
 x2 ≥ 0
 
-julia> Σ, payoff_improvements = IPG.SGM([player_1, player_2], Gurobi.Optimizer, max_iter=5);
+julia> Σ, payoff_improvements = IPG.SGM([player_1, player_2], SCIP.Optimizer, max_iter=5);
 
 julia> Σ[end]
 2-element Vector{DiscreteMixedStrategy}:
@@ -68,5 +68,4 @@ A deviation from the candidate equilibrium is found by computing a player's best
 
 MIP solvers are used (in the default methods) for the initialization of strategies and for computing a deviation (best response, by default) from the candidate equilibrium. Any JuMP-supported MIP solver that can handle the players' problem can be used in SGM. For example, it may be that your players have quadratic constraints, so you will need a MIQCP solver. Your call will look like `IGP.SGM(my_players, MySolver.Optimizer)`.
 
-The algorithm also supports using a different solver for each player. You just need to initialize each player's strategy space with that optimizer factory or use JuMP's method, e.g., `set_optimizer(player.Xp, MySolver.Optimizer)`. It is important _not_ to pass an optimizer as an argument to the SGM method call, or that will overwrite all players' optimizer assignments.
-
+The algorithm also supports using a different solver for each player. You just need to initialize each player's strategy space with that optimizer factory or use JuMP's method, e.g., `set_optimizer(player, MySolver.Optimizer)`. It is important to note that the `optimizer_factory` that is provided to SGM will _not_ overwrite any player's optimizer. It will be set as the player's optimizer only if no optimizer has been set.

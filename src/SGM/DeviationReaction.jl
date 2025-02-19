@@ -1,13 +1,13 @@
 
 "Find a deviation from mixed profile `σ`."
-function find_deviation_best_response(players::Vector{Player}, σ::Vector{DiscreteMixedStrategy}, optimizer_factory=nothing; player_order=nothing, dev_tol=1e-3)::Tuple{Float64,Int64,Union{Nothing,Vector{Float64}}}
+function find_deviation_best_response(players::Vector{Player}, σ::Vector{DiscreteMixedStrategy}; player_order=nothing, dev_tol=1e-3)::Tuple{Float64,Int64,Union{Nothing,Vector{Float64}}}
     if isnothing(player_order)
         player_order = 1:length(players)
     end
 
     for p in player_order
         player = players[p]
-        new_x_p = best_response(player, σ, optimizer_factory)
+        new_x_p = best_response(player, σ)
 
         new_σ = copy(σ)
         new_σ[p] = DiscreteMixedStrategy([1], [new_x_p])

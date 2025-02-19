@@ -10,7 +10,7 @@ struct DiscreteMixedStrategy
         if length(probs) != size(supp, 1)
             error("There must be as many probabilities as strategies in the support.")
         end
-        if sum(probs) != 1
+        if ~(sum(probs) ≈ 1)
             error("Probabilities must sum to 1.")
         end
         if any(probs .< 0)

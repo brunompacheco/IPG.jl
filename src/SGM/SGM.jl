@@ -4,13 +4,21 @@ include("PlayerOrder.jl")
 include("DeviationReaction.jl")
 include("Initialization.jl")
 
-function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, dev_tol=1e-3)
+function SGM(players::Vector{Player}, optimizer_factory; max_iter=100, dev_tol=1e-3)
+    # set `optimizer_factory` the optimizer for each player that doesn't have one yet
+    for player in players
+        # check whether an optimizer has already been set to player
+        if ~has_optimizer(player)
+            set_optimizer(player, optimizer_factory)
+        end
+    end
+
     ### Step 1: Initialization
     # The sampled game (sample of feasible strategies) is built from warm-start values from
     # the strategy space of each player or, in case there is none, a feasibility problem is
     # solved
 
-    S_X = initialize_strategies(players, optimizer_factory)
+    S_X = initialize_strategies(players)
     sampled_game = SampledGame(players, S_X)
 
     Σ_S = Vector{Vector{DiscreteMixedStrategy}}()  # candidate equilibria
@@ -20,7 +28,7 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, d
         # A (mixed) Nash equilibrium is computed for the sampled game. Note that it is a
         # feasible strategy for the original game, but not necessarily a equilibrium.
 
-        σ_S = solve(sampled_game)
+        σ_S = solve(sampled_game, optimizer_factory)
         push!(Σ_S, σ_S)
 
         ### Step 3: Termination
@@ -28,7 +36,7 @@ function SGM(players::Vector{Player}, optimizer_factory=nothing; max_iter=100, d
         # found, `σ` is a equilibrium for the game, so we stop.
 
         player_order = get_player_order(players, iter, Σ_S, payoff_improvements)
-        payoff_improvement, p, new_xp = find_deviation(players, σ_S, optimizer_factory, player_order=player_order, dev_tol=dev_tol)
+        payoff_improvement, p, new_xp = find_deviation(players, σ_S, player_order=player_order, dev_tol=dev_tol)
         push!(payoff_improvements, (p, payoff_improvement))
 
         if payoff_improvement < dev_tol
