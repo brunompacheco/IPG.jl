@@ -1,6 +1,6 @@
 
 "Compute polymatrix for normal form game from sample of strategies."
-function get_polymatrix(players::Vector{Player}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function get_polymatrix(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
     polymatrix = Dict{Tuple{Integer, Integer}, Matrix{Float64}}()
 
     # compute utility of each player `p` using strategy `i_p` against player `k` using strategy `i_k`
@@ -32,14 +32,14 @@ mutable struct SampledGame
     S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
     normal_game::NormalGames.NormalGame
 end
-function SampledGame(players::Vector{Player}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function SampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
     payoff_polymatrix = get_polymatrix(players, S_X)
     normal_game = NormalGames.NormalGame(length(players), length.(S_X), payoff_polymatrix)
 
     return SampledGame(S_X, normal_game)
 end
 
-function add_new_strategy!(sampled_game::SampledGame, players::Vector{Player}, new_xp::Vector{<:Real}, p::Integer)
+function add_new_strategy!(sampled_game::SampledGame, players::Vector{<:AbstractPlayer}, new_xp::Vector{<:Real}, p::Integer)
     # first part is easy, just add the new strategy to the set
     push!(sampled_game.S_X[p], new_xp)
 

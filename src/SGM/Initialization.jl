@@ -1,5 +1,5 @@
 
-function initialize_strategies_feasibility(players::Vector{Player})
+function initialize_strategies_feasibility(players::Vector{<:AbstractPlayer})
     S_X = [Vector{Vector{Float64}}() for _ in players]
     for player in players
         xp_init = start_value.(all_variables(player.Xp))
@@ -16,7 +16,7 @@ function initialize_strategies_feasibility(players::Vector{Player})
     return S_X
 end
 
-function initialize_strategies_player_alone(players::Vector{Player})
+function initialize_strategies_player_alone(players::Vector{<:AbstractPlayer})
     S_X = [Vector{Vector{Float64}}() for _ in players]
 
     # mixed profile that simulates players being alone (all others play 0)

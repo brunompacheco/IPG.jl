@@ -4,7 +4,7 @@ include("PlayerOrder.jl")
 include("DeviationReaction.jl")
 include("Initialization.jl")
 
-function SGM(players::Vector{Player}, optimizer_factory; max_iter=100, dev_tol=1e-3)
+function SGM(players::Vector{<:AbstractPlayer}, optimizer_factory; max_iter=100, dev_tol=1e-3)
     # set `optimizer_factory` the optimizer for each player that doesn't have one yet
     for player in players
         # check whether an optimizer has already been set to player

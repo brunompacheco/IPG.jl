@@ -13,6 +13,43 @@ using Test
         @test expected_value(sum, σp) == 1.0
     end
 
+    @testset "Player serialization" begin
+        using JuMP, SCIP
+
+        X1 = Model()
+        @variable(X1, x1, start=10.0)
+        @constraint(X1, x1 >= 0)
+
+        player = Player(X1, QuadraticPayoff(0, [2, 1]), 1)
+
+        filename = "test_player.json"
+        IPG.save(player, filename)
+        loaded_player = IPG.load(filename)
+
+        @test loaded_player.p == player.p
+        @test loaded_player.Πp.cp == player.Πp.cp
+        @test loaded_player.Πp.Qp == player.Πp.Qp
+
+        # test strategy space
+        X1 = player.Xp
+        loaded_X1 = loaded_player.Xp
+
+        set_optimizer(X1, SCIP.Optimizer)
+        set_optimizer(loaded_X1, SCIP.Optimizer)
+
+        set_silent(X1)
+        optimize!(X1)
+
+        set_silent(loaded_X1)
+        optimize!(loaded_X1)
+
+        @test value.(all_variables(X1)) == value.(all_variables(loaded_X1))
+        @test objective_value(X1) == objective_value(loaded_X1)
+
+        # cleanup
+        rm(filename)
+    end
+
     @testset "Example 5.3" begin
         using SCIP
 
