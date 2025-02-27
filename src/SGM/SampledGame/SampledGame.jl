@@ -1,4 +1,23 @@
 
+abstract type AbstractSampledGame end
+
+mutable struct GenericSampledGame <: AbstractSampledGame
+    S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
+end
+function GenericSampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+    error("Not implemented yet.")
+
+    # if length(players) == 2
+    #     return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
+    # else
+    #     return SampledGame(S_X)
+    # end
+end
+
+function add_new_strategy!(sg::GenericSampledGame, players::Vector{<:AbstractPlayer}, new_xp::Vector{<:Real}, p::Integer)
+    push!(sg.S_X[p], new_xp)
+end
+
 "Compute polymatrix for normal form game from sample of strategies."
 function get_polymatrix(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
     polymatrix = Dict{Tuple{Integer, Integer}, Matrix{Float64}}()
@@ -27,10 +46,28 @@ function get_polymatrix(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_
     return polymatrix
 end
 
-abstract type AbstractSampledGame end
+function get_polymatrix(player1::AbstractPlayer, player2::AbstractPlayer, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+    p = player1.p
+    k = player2.p
 
-mutable struct SampledGame <: AbstractSampledGame
-    S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
+    # initialization
+    polymatrix = Dict{Tuple{Integer, Integer}, Matrix{Float64}}()
+
+    polymatrix[p,p] = zeros(length(S_X[p]), length(S_X[p]))
+    polymatrix[k,k] = zeros(length(S_X[k]), length(S_X[k]))
+
+    polymatrix[p,k] = zeros(length(S_X[p]), length(S_X[k]))
+    polymatrix[k,p] = zeros(length(S_X[k]), length(S_X[p]))
+
+    # compute polymatrix for two-player game
+    for i_p in 1:length(S_X[p])
+        for i_k in 1:length(S_X[k])
+            polymatrix[p,k][i_p,i_k] = payoff(player1.Πp, [S_X[p][i_p] , S_X[k][i_k]], 1)
+            polymatrix[k,p][i_k,i_p] = payoff(player2.Πp, [S_X[p][i_p] , S_X[k][i_k]], 2)
+        end
+    end
+
+    return polymatrix
 end
 
 "Normal-form polymatrix representation of the sampled game."
@@ -38,21 +75,14 @@ mutable struct PolymatrixSampledGame <: AbstractSampledGame
     S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
     polymatrix::Dict{Tuple{Int, Int}, Matrix{Float64}}
 end
-function SampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
-    error("Not implemented yet.")
 
-    # if length(players) == 2
-    #     return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
-    # else
-    #     return SampledGame(S_X)
-    # end
-end
-function SampledGame(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function PolymatrixSampledGame(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
     return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
 end
+function PolymatrixSampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+    @assert length(players) == 2  "Cannot build polymatrix for more than two players unless their payoffs are bilatera (see `BilateralPayoff`)"
 
-function add_new_strategy!(sg::AbstractSampledGame, players::Vector{<:Player{<:AbstractBilateralPayoff}}, new_xp::Vector{<:Real}, p::Integer)
-    push!(sg.S_X[p], new_xp)
+    return PolymatrixSampledGame(S_X, get_polymatrix(players[1], players[2], S_X))
 end
 
 function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<:AbstractBilateralPayoff}}, new_xp::Vector{<:Real}, p::Integer)
@@ -90,5 +120,34 @@ function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<
         end
     end
 end
+function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:AbstractPlayer}, new_xp::Vector{<:Real}, p::Integer)
+    k = p == 1 ? 2 : 1
+
+    player_p = players[p]
+    player_k = players[k]
+
+    # first part is easy, just add the new strategy to the set
+    push!(sg.S_X[p], new_xp)
+
+    # now we need to update the polymatrix
+
+    # add new row to polymatrix to store the utilities wrt the new strategy
+    sg.polymatrix[p,p] = zeros(length(sg.S_X[p]), length(sg.S_X[p]))
+
+    # add new row/column to polymatrix to store the utilities wrt the new strategy
+    sg.polymatrix[k,p] = hcat(sg.polymatrix[k,p], zeros(length(sg.S_X[k]), 1))
+    sg.polymatrix[p,k] = vcat(sg.polymatrix[p,k], zeros(1, length(sg.S_X[k])))
+
+    for i in 1:length(sg.S_X[k])
+        # compute new utilities of player `k` against the new strategy of player `p`
+        sg.polymatrix[k,p][i,end] = payoff(player_k.Πp, [new_xp , sg.S_X[k][i]], 2)
+
+        # compute new utilities of player `p` using the new strategy against the old
+        # strategies of player `k`
+        sg.polymatrix[p,k][end,i] = payoff(player_p.Πp, [new_xp , sg.S_X[k][i]], 1)
+    end
+end
+
+SampledGame = PolymatrixSampledGame  # default value
 
 include("SearchNE.jl")
