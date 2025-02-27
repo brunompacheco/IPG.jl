@@ -10,7 +10,7 @@ JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 NormalGames = "4dc104ef-1e0c-4a09-93ea-14ddc8e86204"
 
 [sources]
-NormalGames = {path = "Normal-form-games"}
+NormalGames = {url = "https://github.com/mxmmargarida/Normal-form-games", rev = "optimizer-agnosticism"}
 
 [compat]
 IterTools = "1.10.0"
