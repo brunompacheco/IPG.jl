@@ -31,14 +31,33 @@ end
 function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixedStrategy})
     xp = all_variables(player.Xp)
 
+    σ_others = [σ[1:player.p-1] ; σ[player.p+1:end]]
+    obj = expected_value(x_others -> payoff(player.Πp, [x_others[1:player.p-1] ; [xp] ; x_others[player.p+1:end]], player.p), σ_others)
+
+    # I don't know why, but it was raising an error without changing the sense to feasibility first
+    set_objective_sense(player.Xp, JuMP.MOI.FEASIBILITY_SENSE)
+    @objective(player.Xp, JuMP.MOI.MAX_SENSE, obj)
+
+    set_silent(player.Xp)
+    optimize!(player.Xp)
+
+    return value.(xp)
+end
+function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{DiscreteMixedStrategy})
+    xp = all_variables(player.Xp)
+
     # TODO: No idea why this doesn't work
     # @objective(model, Max, sum([IPG.bilateral_payoff(Πp, p, xp, k, σ[k]) for k in 1:m]))
 
     obj = AffExpr()
     for k in 1:length(σ)
-        obj += IPG.bilateral_payoff(player.Πp, player.p, xp, k, σ[k])
+        if k == player.p
+            obj += IPG.bilateral_payoff(player.Πp, player.p, xp, player.p, xp)
+        else
+            obj += IPG.bilateral_payoff(player.Πp, player.p, xp, k, σ[k])
+        end
     end
-    # I don't know why, but it was raising an error without changing the sense
+    # I don't know why, but it was raising an error without changing the sense to feasibility first
     set_objective_sense(player.Xp, JuMP.MOI.FEASIBILITY_SENSE)
     @objective(player.Xp, JuMP.MOI.MAX_SENSE, obj)
 

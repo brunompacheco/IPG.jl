@@ -16,7 +16,6 @@ end
 Note that the `xp` argument can also be a vector of JuMP variable references. This is
 because the payoff functions are also used to build JuMP expressions, e.g., in
 `best_response` (see `src/Game/Player.jl`).
-
 """
 abstract type AbstractBilateralPayoff <: AbstractPayoff end
 
@@ -38,7 +37,7 @@ function QuadraticPayoff(cp::Real, Qp::Vector{<:Real})
 end
 
 "Compute each component of the payoff of player `p` with respect to player `k`."
-function bilateral_payoff(Πp::QuadraticPayoff, p::Integer, xp::Vector{<:Union{Real,VariableRef}}, k::Integer, xk::Vector{<:Real})
+function bilateral_payoff(Πp::QuadraticPayoff, p::Integer, xp::Vector{<:Union{Real,VariableRef}}, k::Integer, xk::Vector{<:Union{Real,VariableRef}})
     if p == k
         return Πp.cp' * xp - 0.5 * xp' * Πp.Qp[p] * xp
     else
