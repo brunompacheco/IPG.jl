@@ -1,7 +1,7 @@
 using NormalGames
 
 "Compute a (mixed) nash equilibrium for the sampled game using PNS."
-function solve_PNS(sampled_game::SampledGame, optimizer_factory)::Vector{DiscreteMixedStrategy}
+function solve_PNS(sampled_game::PolymatrixSampledGame, optimizer_factory)::Vector{DiscreteMixedStrategy}
     normal_game = NormalGames.NormalGame(
         length(sampled_game.S_X),
         length.(sampled_game.S_X),
@@ -21,7 +21,7 @@ function solve_PNS(sampled_game::SampledGame, optimizer_factory)::Vector{Discret
 end
 
 "Compute a (mixed) nash equilibrium for the sampled game using Formulation 1 (Big-M) of Sandholm et al. (2005)."
-function solve_Sandholm1(sampled_game::SampledGame, optimizer_factory)::Vector{DiscreteMixedStrategy}
+function solve_Sandholm1(sampled_game::PolymatrixSampledGame, optimizer_factory)::Vector{DiscreteMixedStrategy}
     # the method doesn't support polymatrices with negative entries, so a quick
     # preprocessing is performed
     polymatrix = copy(sampled_game.polymatrix)

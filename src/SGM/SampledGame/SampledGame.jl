@@ -27,16 +27,35 @@ function get_polymatrix(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_
     return polymatrix
 end
 
-"Normal-form representation of the sampled game."
-mutable struct SampledGame
+abstract type AbstractSampledGame end
+
+mutable struct SampledGame <: AbstractSampledGame
+    S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
+end
+
+"Normal-form polymatrix representation of the sampled game."
+mutable struct PolymatrixSampledGame <: AbstractSampledGame
     S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
     polymatrix::Dict{Tuple{Int, Int}, Matrix{Float64}}
 end
+function SampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+    error("Not implemented yet.")
+
+    # if length(players) == 2
+    #     return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
+    # else
+    #     return SampledGame(S_X)
+    # end
+end
 function SampledGame(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
-    return SampledGame(S_X, get_polymatrix(players, S_X))
+    return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
 end
 
-function add_new_strategy!(sg::SampledGame, players::Vector{<:Player{<:AbstractBilateralPayoff}}, new_xp::Vector{<:Real}, p::Integer)
+function add_new_strategy!(sg::AbstractSampledGame, players::Vector{<:Player{<:AbstractBilateralPayoff}}, new_xp::Vector{<:Real}, p::Integer)
+    push!(sg.S_X[p], new_xp)
+end
+
+function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<:AbstractBilateralPayoff}}, new_xp::Vector{<:Real}, p::Integer)
     # first part is easy, just add the new strategy to the set
     push!(sg.S_X[p], new_xp)
     strat = length.(sg.S_X)
