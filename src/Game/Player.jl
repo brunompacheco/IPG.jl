@@ -27,33 +27,14 @@ function set_optimizer(player::AbstractPlayer, optimizer_factory)
     JuMP.set_optimizer(player.Xp, optimizer_factory)
 end
 
-"Compute the utility that `player_p` receives from `player_k` when they play, resp., `xp` and `xk`."
-function bilateral_payoff(player_p::Player{QuadraticPayoff}, xp::Vector{<:Union{Real,VariableRef}}, player_k::Player{QuadraticPayoff}, xk::Vector{<:Real})
-    return bilateral_payoff(player_p.Πp, player_p.p, xp, player_k.p, xk)
-end
-"Compute the utility that `player_p` receives from `player_k` when they play, resp., `xp` and `σk`."
-function bilateral_payoff(player_p::Player{QuadraticPayoff}, xp::Vector{<:Union{Real,VariableRef}}, player_k::Player{QuadraticPayoff}, σk::DiscreteMixedStrategy)
-    return expected_value(xk -> bilateral_payoff(player_p.Πp, player_p.p, xp, player_k.p, xk), σk)
-end
-
-"Compute the payoff of player `player` given pure strategy profile `x`."
-function payoff(player::AbstractPlayer, x::Vector{<:Vector{<:Real}})
-    return payoff(player.Πp, x, player.p)
-end
-"Compute the payoff of player `player` given mixed strategy profile `σ`."
-function payoff(player::AbstractPlayer, σ::Vector{DiscreteMixedStrategy})
-    _payoff = x -> payoff(player, x)
-    return expected_value(_payoff, σ)
-end
-
 "Compute `player`'s best response to the mixed strategy profile `σp`."
-function best_response(player::Player{QuadraticPayoff}, σ::Vector{DiscreteMixedStrategy})
+function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixedStrategy})
     xp = all_variables(player.Xp)
 
     # TODO: No idea why this doesn't work
     # @objective(model, Max, sum([IPG.bilateral_payoff(Πp, p, xp, k, σ[k]) for k in 1:m]))
 
-    obj = QuadExpr()
+    obj = AffExpr()
     for k in 1:length(σ)
         obj += IPG.bilateral_payoff(player.Πp, player.p, xp, k, σ[k])
     end

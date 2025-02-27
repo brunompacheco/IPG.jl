@@ -1,9 +1,9 @@
 module IPG
 
-using NormalGames, JuMP
+using JuMP
 
 include("Game/Strategies.jl")
-include("Game/Payoff.jl")
+include("Game/Payoff/Payoff.jl")
 include("Game/Player.jl")
 include("SGM/SGM.jl")
 
