@@ -21,6 +21,10 @@ struct DiscreteMixedStrategy
         return new(probs[probs .> 0], supp[probs .> 0])
     end
 end
+"Build mixed strategy from pure strategy."
+function DiscreteMixedStrategy(xp::Vector{<:Real})
+    return DiscreteMixedStrategy([1.0], [xp])
+end
 
 "Check whether the mixed strategy is actually pure."
 function is_pure(σp::DiscreteMixedStrategy)

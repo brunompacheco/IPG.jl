@@ -29,8 +29,7 @@ end
 
 "Compute `player`'s best response to the pure strategy profile `x`."
 function best_response(player::Player{<:AbstractPayoff}, x::Vector{<:Vector{<:Real}})
-    σ::Vector{DiscreteMixedStrategy} = [DiscreteMixedStrategy(xp) for xp in x]
-    return best_response(player, σ)
+    return best_response(player, DiscreteMixedStrategy.(x))
 end
 
 "Compute `player`'s best response to the mixed strategy profile `σp`."
