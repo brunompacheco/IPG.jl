@@ -48,7 +48,7 @@ function expected_value(f::Function, σ::Vector{<:DiscreteMixedStrategy})
     expectation = 0
 
     # iterate over all possible _pure_ strategy profile
-    for (probs, x) in zip(product([σp.probs for σp in σ]...), product([σp.supp for σp in σ]...))
+    for (probs, x) in zip(Iterators.product([σp.probs for σp in σ]...), Iterators.product([σp.supp for σp in σ]...))
         prob = prod(probs)
         x = collect(x)  # convert tuple to vector
         expectation += prob * f(x)
