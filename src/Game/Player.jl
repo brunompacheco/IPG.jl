@@ -27,12 +27,18 @@ function set_optimizer(player::AbstractPlayer, optimizer_factory)
     JuMP.set_optimizer(player.Xp, optimizer_factory)
 end
 
+"Compute `player`'s best response to the pure strategy profile `x`."
+function best_response(player::Player{<:AbstractPayoff}, x::Vector{<:Vector{<:Real}})
+    σ::Vector{DiscreteMixedStrategy} = [DiscreteMixedStrategy(xp) for xp in x]
+    return best_response(player, σ)
+end
+
 "Compute `player`'s best response to the mixed strategy profile `σp`."
 function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixedStrategy})
     xp = all_variables(player.Xp)
 
     σ_others = [σ[1:player.p-1] ; σ[player.p+1:end]]
-    obj = expected_value(x_others -> payoff(player.Πp, [x_others[1:player.p-1] ; [xp] ; x_others[player.p+1:end]], player.p), σ_others)
+    obj = expected_value(x_others -> payoff(player.Πp, [x_others[1:player.p-1] ; [xp] ; x_others[player.p:end]], player.p), σ_others)
 
     # I don't know why, but it was raising an error without changing the sense to feasibility first
     set_objective_sense(player.Xp, JuMP.MOI.FEASIBILITY_SENSE)
