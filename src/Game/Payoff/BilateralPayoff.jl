@@ -37,7 +37,7 @@ function QuadraticPayoff(cp::Real, Qp::Vector{<:Real})
 end
 
 "Compute each component of the payoff of player `p` with respect to player `k`."
-function bilateral_payoff(Πp::QuadraticPayoff, p::Integer, xp::Vector{<:Union{Real,VariableRef}}, k::Integer, xk::Vector{<:Union{Real,VariableRef}})
+function bilateral_payoff(Πp::QuadraticPayoff, p::Integer, xp::Vector{<:Any}, k::Integer, xk::Vector{<:Any})
     if p == k
         return Πp.cp' * xp - 0.5 * xp' * Πp.Qp[p] * xp
     else
@@ -48,7 +48,7 @@ end
 
 # Utils
 
-function bilateral_payoff(Πp::AbstractBilateralPayoff, p::Integer, xp::Vector{<:Union{Real,VariableRef}}, k::Integer, σk::DiscreteMixedStrategy)
+function bilateral_payoff(Πp::AbstractBilateralPayoff, p::Integer, xp::Vector{<:Any}, k::Integer, σk::DiscreteMixedStrategy)
     return expected_value(xk -> bilateral_payoff(Πp, p, xp, k, xk), σk)
 end
 function bilateral_payoff(Πp::AbstractBilateralPayoff, p::Integer, σp::DiscreteMixedStrategy, k::Integer, σk::DiscreteMixedStrategy)
@@ -56,6 +56,11 @@ function bilateral_payoff(Πp::AbstractBilateralPayoff, p::Integer, σp::Discret
 end
 
 "Compute the payoff of player `p` given strategies x."
-function payoff(Πp::AbstractBilateralPayoff, x::Vector{<:Vector{<:Union{Real,VariableRef}}}, p::Integer)
-    return sum([bilateral_payoff(Πp, p, x[p], k, x[k]) for k in 1:length(x)])
+function payoff(Πp::AbstractBilateralPayoff, x::Vector{<:Vector{<:Any}}, p::Integer)
+    payoff_value = bilateral_payoff(Πp, p, x[p], 1, x[1])
+    for k in 2:length(x)
+        payoff_value += bilateral_payoff(Πp, p, x[p], k, x[k])
+    end
+    return payoff_value
+    # return sum([bilateral_payoff(Πp, p, x[p], k, x[k]) for k in 1:length(x)])
 end
