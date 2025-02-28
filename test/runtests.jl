@@ -2,6 +2,28 @@ using IPG
 using Test
 
 @testset "IPG.jl" begin
+    # TODO: test for bilateral payoff vs. generic payoff. formulate bilateral payoff
+    # function as generic and check that both calls to payoff function return the same value
+    @testset "Bilateral Payoff" begin
+        quad_payoff = (x, p) -> -(x[p][1]*x[p][1]) + prod([x[i][1] for i in eachindex(x)])
+        Π_generic = GenericPayoff(quad_payoff)
+        Π_bilateral = QuadraticPayoff(0, [2, 1])  # equivalent for the first player
+
+        x = [[10.0], [10.0]]
+        @test payoff(Π_generic, x, 1) == payoff(Π_bilateral, x, 1)  # == 0.0
+        x = [[0.0], [0.0]]
+        @test payoff(Π_generic, x, 1) == payoff(Π_bilateral, x, 1)
+        x = [[10.0], [5.0]]
+        @test payoff(Π_generic, x, 1) == payoff(Π_bilateral, x, 1)
+        σ = DiscreteMixedStrategy.(x)
+        @test payoff(Π_generic, σ, 1) == payoff(Π_bilateral, σ, 1)
+        σ = [
+            DiscreteMixedStrategy([0.5, 0.5], [[1], [0]]),
+            DiscreteMixedStrategy([0.25, 0.75], [[5], [10]]),
+        ]
+        @test payoff(Π_generic, σ, 1) == payoff(Π_bilateral, σ, 1)
+    end
+
     @testset "DiscreteMixedStrategy" begin
         σp = DiscreteMixedStrategy([0.5, 0.5], [[1, 0], [0, 1]])
         @test length(σp.probs) == 2
@@ -11,6 +33,10 @@ using Test
         @test IPG.is_pure(σp) == false
         @test expected_value(identity, σp) == [0.5, 0.5]
         @test expected_value(sum, σp) == 1.0
+
+        xp = [1, 2, 3]
+        σp = DiscreteMixedStrategy(xp)
+        @test expected_value(identity, σp) == xp
     end
 
     @testset "Player serialization" begin
@@ -65,7 +91,7 @@ using Test
         @constraint(P2.Xp, x2 >= 0)
 
         Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5);
-        
+
         @test [σ[1].supp for σ in Σ] ≈ [
             [[10.0]],
             [[10.0]],
