@@ -16,6 +16,7 @@ because the payoff functions are also used to build JuMP expressions, e.g., in
 """
 abstract type AbstractPayoff end
 
+# TODO: GenericPayoff -> Payoff... or BlackBoxPayoff?
 struct GenericPayoff <: AbstractPayoff
     "The arguments must be a strategy profile and a player index, and return the player's payoff."
     f::Function
@@ -23,6 +24,8 @@ end
 
 "Compute the payoff of player `p` given strategies x."
 function payoff(Πp::GenericPayoff, x::Vector{<:Vector{<:Any}}, p::Integer)
+    # TODO: this notation is really weird. I think it would be better to always have `x_p`
+    # and `x_others` instead of passing indices
     return Πp.f(x, p)
 end
 
