@@ -1,9 +1,79 @@
 using IPG
 using Test
+using LinearAlgebra, JuMP, SCIP
+
+function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound::Int; i_type="H")
+    factor = i_type == "H" ? 0.1 : 0.01
+    RQ = 5
+
+    # Generate positive semidefinite matrix M
+    M = zeros(Float64, (n*m, n*m))
+    while ~isposdef(M)
+        M = rand(Float64, (n*m, n*m))
+        M = (M .* 2 .- 1) .* RQ  # scaling
+        M = M * M'
+    end
+
+    M_max = maximum(M)
+    for i in 1:n
+        for j in ((i-1) * m + 1):(i * m)
+            for k in (i * m + 1):(size(M, 2))
+                vjk = (rand() * 2 - 1) * factor * M_max
+                vjk = round(vjk, digits=1)
+                M[j, k] += vjk
+                M[k, j] -= vjk
+            end
+        end
+    end
+
+    # build players
+    players = Vector{Player{QuadraticPayoff}}()
+    for p in 1:n
+        # build payoff
+        Qp = Vector{Matrix{Float64}}()
+        for k in 1:n
+            push!(Qp, M[((p-1) * m + 1):(p * m), ((k-1) * m + 1):(k * m)])
+        end
+
+        cp = rand(-RQ:RQ, m)
+        Πp = QuadraticPayoff(cp, Qp)
+
+        # build strategy space
+        Xp = Model()
+        @variable(Xp, lower_bound <= x[1:m] <= upper_bound, Int)
+
+        push!(players, Player(Xp, Πp, p))
+    end
+
+    return players
+end
 
 @testset "IPG.jl" begin
-    # TODO: test for bilateral payoff vs. generic payoff. formulate bilateral payoff
-    # function as generic and check that both calls to payoff function return the same value
+    @testset "Two-player game" begin
+        IPG.initialize_strategies = IPG.initialize_strategies_player_alone
+
+        bilateral_players = generate_random_instance(2, 2, -5, 5)
+
+        # "black-box" function for generic payoff players
+        function generic_payoff(x, p)
+            return sum([payoff(player.Πp, x, p) for player in bilateral_players])
+        end
+
+        generic_players = [
+            Player(copy(player.Xp), GenericPayoff(generic_payoff), player.p)
+            for player in bilateral_players
+        ]
+
+        Σ_bilateral, poff_imp_bilateral = IPG.SGM(bilateral_players, SCIP.Optimizer, max_iter=10)
+        Σ_generic, poff_imp_generic = IPG.SGM(generic_players, SCIP.Optimizer, max_iter=10)
+
+        @test all([all(σ_bilateral .≈ σ_generic) for (σ_bilateral, σ_generic) in zip(Σ_bilateral, Σ_generic)])
+        @test all([all(p_bilateral .≈ p_generic) for (p_bilateral, p_generic) in zip(poff_imp_bilateral, poff_imp_generic)])
+
+        # not sure if necessary, but let's guarantee reproducibility
+        IPG.initialize_strategies = IPG.initialize_strategies_feasibility
+    end
+
     @testset "Bilateral Payoff" begin
         quad_payoff = (x, p) -> -(x[p][1]*x[p][1]) + prod([x[i][1] for i in eachindex(x)])
         Π_generic = GenericPayoff(quad_payoff)
@@ -48,8 +118,6 @@ using Test
     end
 
     @testset "Player serialization" begin
-        using JuMP, SCIP
-
         X1 = Model()
         @variable(X1, x1, start=10.0)
         @constraint(X1, x1 >= 0)
