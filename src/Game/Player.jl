@@ -55,7 +55,7 @@ function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{Dis
     # @objective(model, Max, sum([IPG.bilateral_payoff(Πp, p, xp, k, σ[k]) for k in 1:m]))
 
     obj = AffExpr()
-    for k in 1:length(σ)
+    for k in eachindex(σ)
         if k == player.p
             obj += IPG.bilateral_payoff(player.Πp, player.p, xp, player.p, xp)
         else

@@ -62,5 +62,4 @@ function payoff(Πp::AbstractBilateralPayoff, x::Vector{<:Vector{<:Any}}, p::Int
         payoff_value += bilateral_payoff(Πp, p, x[p], k, x[k])
     end
     return payoff_value
-    # return sum([bilateral_payoff(Πp, p, x[p], k, x[k]) for k in 1:length(x)])
 end
