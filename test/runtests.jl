@@ -37,6 +37,14 @@ using Test
         xp = [1, 2, 3]
         σp = DiscreteMixedStrategy(xp)
         @test expected_value(identity, σp) == xp
+
+        σa = DiscreteMixedStrategy([0.5, 0.5], [[1, 0], [0, 1]])
+        σb = DiscreteMixedStrategy([0.5, 0.5], [[1, 0], [0, 1]])
+        @test σa == σb
+
+        σc = DiscreteMixedStrategy([0.5 + eps(), 0.5 - eps()], [[1, 0], [0, 1]])
+        @test σa != σc
+        @test σa ≈ σc
     end
 
     @testset "Player serialization" begin

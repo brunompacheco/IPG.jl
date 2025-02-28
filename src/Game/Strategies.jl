@@ -25,6 +25,8 @@ end
 function DiscreteMixedStrategy(xp::Vector{<:Real})
     return DiscreteMixedStrategy([1.0], [xp])
 end
+Base.:(==)(σp1::DiscreteMixedStrategy, σp2::DiscreteMixedStrategy) = σp1.probs == σp2.probs && σp1.supp == σp2.supp
+Base.:(≈)(σp1::DiscreteMixedStrategy, σp2::DiscreteMixedStrategy) = σp1.probs ≈ σp2.probs && σp1.supp ≈ σp2.supp
 
 "Check whether the mixed strategy is actually pure."
 function is_pure(σp::DiscreteMixedStrategy)
