@@ -60,7 +60,7 @@ end
         end
 
         generic_players = [
-            Player(copy(player.Xp), GenericPayoff(generic_payoff), player.p)
+            Player(copy(player.Xp), BlackBoxPayoff(generic_payoff), player.p)
             for player in bilateral_players
         ]
 
@@ -76,7 +76,7 @@ end
 
     @testset "Bilateral Payoff" begin
         quad_payoff = (x, p) -> -(x[p][1]*x[p][1]) + prod([x[i][1] for i in eachindex(x)])
-        Π_generic = GenericPayoff(quad_payoff)
+        Π_generic = BlackBoxPayoff(quad_payoff)
         Π_bilateral = QuadraticPayoff(0, [2, 1])  # equivalent for the first player
 
         x = [[10.0], [10.0]]

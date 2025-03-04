@@ -6,7 +6,7 @@ A payoff function must implement some form of payoff computation for each player
 A custom implementation can have any fields, but it must implement the `payoff` function.
 The function must have the following signature:
 ```julia
-function payoff(Πp::GenericPayoff, x::Vector{<:Vector{<:Union{Real,VariableRef}}}, p::Integer)
+function payoff(Πp::MyPayoff, x::Vector{<:Vector{<:Union{Real,VariableRef}}}, p::Integer)
     [...]
 end
 ```
@@ -16,14 +16,13 @@ because the payoff functions are also used to build JuMP expressions, e.g., in
 """
 abstract type AbstractPayoff end
 
-# TODO: GenericPayoff -> Payoff... or BlackBoxPayoff?
-struct GenericPayoff <: AbstractPayoff
+struct BlackBoxPayoff <: AbstractPayoff
     "The arguments must be a strategy profile and a player index, and return the player's payoff."
     f::Function
 end
 
 "Compute the payoff of player `p` given strategies x."
-function payoff(Πp::GenericPayoff, x::Vector{<:Vector{<:Any}}, p::Integer)
+function payoff(Πp::BlackBoxPayoff, x::Vector{<:Vector{<:Any}}, p::Integer)
     # TODO: this notation is really weird. I think it would be better to always have `x_p`
     # and `x_others` instead of passing indices
     return Πp.f(x, p)
