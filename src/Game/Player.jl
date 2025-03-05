@@ -11,6 +11,7 @@ struct Player{Payoff<:AbstractPayoff} <: AbstractPlayer
     "Player's index."
     p::Integer  # TODO: this could be Any, to allow for more general collections, e.g, string names
     # TODO: maybe I could just index everything relevant as a Dict{Player, T}?
+    # TODO: I think with the new signature for the payoff functions the index is no longer needed
 end
 "Initialize player with empty strategy space."
 function Player(Πp::Payoff, p::Integer) where Payoff <: AbstractPayoff
@@ -34,10 +35,11 @@ end
 
 "Compute `player`'s best response to the mixed strategy profile `σp`."
 function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixedStrategy})
+    # TODO: I think we could take only `σ_others` as argument
     xp = all_variables(player.Xp)
 
-    σ_others = [σ[1:player.p-1] ; σ[player.p+1:end]]
-    obj = expected_value(x_others -> payoff(player.Πp, [x_others[1:player.p-1] ; [xp] ; x_others[player.p:end]], player.p), σ_others)
+    σ_others = others(σ, player.p)
+    obj = expected_value(x_others -> payoff(player.Πp, xp, x_others), σ_others)
 
     # I don't know why, but it was raising an error without changing the sense to feasibility first
     set_objective_sense(player.Xp, JuMP.MOI.FEASIBILITY_SENSE)
@@ -57,9 +59,9 @@ function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{Dis
     obj = AffExpr()
     for k in eachindex(σ)
         if k == player.p
-            obj += IPG.bilateral_payoff(player.Πp, player.p, xp, player.p, xp)
+            obj += IPG.bilateral_payoff(player.Πp, xp)
         else
-            obj += IPG.bilateral_payoff(player.Πp, player.p, xp, k, σ[k])
+            obj += IPG.bilateral_payoff(player.Πp, xp, σ[k], k)
         end
     end
     # I don't know why, but it was raising an error without changing the sense to feasibility first
@@ -102,6 +104,7 @@ function save(player::Player{QuadraticPayoff}, filename::String)
         :Qp => player.Πp.Qp,
         # JSON3 cannot store matrices, it stores them as a flat vector
         :Qp_shapes => [size(Qpk) for Qpk in player.Πp.Qp],
+        :p => player.Πp.p,
     )
 
     open(filename, "w") do file
@@ -121,9 +124,10 @@ function load(filename::String)::Player{QuadraticPayoff}
     payoff_data = mof_json[:IPG__payoff]
     cp = copy(payoff_data[:cp])
     flat_Qp = copy(payoff_data[:Qp])
+    payoff_index = copy(payoff_data[:p])  # should be equal to player_index
     Qp_shapes = copy(payoff_data[:Qp_shapes])
 
     Qp = [reshape(flat_Qpk, Tuple(Qpk_shape)) for (flat_Qpk, Qpk_shape) in zip(flat_Qp, Qp_shapes)]
 
-    return Player{QuadraticPayoff}(Xp, QuadraticPayoff(cp, Qp), player_index)
+    return Player{QuadraticPayoff}(Xp, QuadraticPayoff(cp, Qp, payoff_index), player_index)
 end

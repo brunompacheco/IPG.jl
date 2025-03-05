@@ -10,6 +10,7 @@ Implementation of the sampled generation method (SGM) for equilibria computation
 
 ## Example
 
+<!-- TODO: update to new payoff signature -->
 This example is based on Example 5.3, from Carvalho, Lodi, and Pedroso (2020).
 ```julia
 julia> using IPG
@@ -39,6 +40,9 @@ julia> Σ[end]
 
 ```
 Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
+<!-- TODO: add test to guarantee that the example above returns these precise values -->
+
+<!-- TODO: present two-player games -->
 
 ## Customization
 

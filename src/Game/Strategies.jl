@@ -56,3 +56,9 @@ function expected_value(f::Function, σ::Vector{<:DiscreteMixedStrategy})
 
     return expectation
 end
+
+# Utils
+
+function others(x::Vector{<:Any}, p::Integer)
+    return [x[1:p-1] ; x[p+1:end]]
+end

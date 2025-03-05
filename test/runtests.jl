@@ -36,7 +36,7 @@ function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound:
         end
 
         cp = rand(-RQ:RQ, m)
-        Πp = QuadraticPayoff(cp, Qp)
+        Πp = QuadraticPayoff(cp, Qp, p)
 
         # build strategy space
         Xp = Model()
@@ -53,45 +53,50 @@ end
         IPG.initialize_strategies = IPG.initialize_strategies_player_alone
 
         bilateral_players = generate_random_instance(2, 2, -5, 5)
-
-        # "black-box" function for generic payoff players
-        function generic_payoff(x, p)
-            return sum([payoff(player.Πp, x, p) for player in bilateral_players])
+        for player in bilateral_players
+            for variable in all_variables(player.Xp)
+                set_start_value(variable, 1.0)
+            end
         end
 
-        generic_players = [
-            Player(copy(player.Xp), BlackBoxPayoff(generic_payoff), player.p)
+        # "black-box" function for blackbox payoff players
+        function get_blackbox_function(p)
+            return (xp, x_others) -> payoff(bilateral_players[p].Πp, xp, x_others)
+        end
+
+        blackbox_players = [
+            Player(copy(player.Xp), BlackBoxPayoff(get_blackbox_function(player.p)), player.p)
             for player in bilateral_players
         ]
 
         Σ_bilateral, poff_imp_bilateral = IPG.SGM(bilateral_players, SCIP.Optimizer, max_iter=10)
-        Σ_generic, poff_imp_generic = IPG.SGM(generic_players, SCIP.Optimizer, max_iter=10)
+        Σ_blackbox, poff_imp_blackbox = IPG.SGM(blackbox_players, SCIP.Optimizer, max_iter=10)
 
-        @test all([all(σ_bilateral .≈ σ_generic) for (σ_bilateral, σ_generic) in zip(Σ_bilateral, Σ_generic)])
-        @test all([all(p_bilateral .≈ p_generic) for (p_bilateral, p_generic) in zip(poff_imp_bilateral, poff_imp_generic)])
+        @test all([all(σ_bilateral .≈ σ_blackbox) for (σ_bilateral, σ_blackbox) in zip(Σ_bilateral, Σ_blackbox)])
+        @test all([all(p_bilateral .≈ p_blackbox) for (p_bilateral, p_blackbox) in zip(poff_imp_bilateral, poff_imp_blackbox)])
 
         # not sure if necessary, but let's guarantee reproducibility
         IPG.initialize_strategies = IPG.initialize_strategies_feasibility
     end
 
     @testset "Bilateral Payoff" begin
-        quad_payoff = (x, p) -> -(x[p][1]*x[p][1]) + prod([x[i][1] for i in eachindex(x)])
-        Π_generic = BlackBoxPayoff(quad_payoff)
-        Π_bilateral = QuadraticPayoff(0, [2, 1])  # equivalent for the first player
+        quad_payoff = (xp, x_others) -> -xp[1]*xp[1] + xp[1] * x_others[1][1]
+        Π_blackbox = BlackBoxPayoff(quad_payoff)
+        Π_bilateral = QuadraticPayoff(0, [2, 1], 1)  # equivalent for the first player
 
         x = [[10.0], [10.0]]
-        @test payoff(Π_generic, x, 1) == payoff(Π_bilateral, x, 1)  # == 0.0
+        @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))  # == 0.0
         x = [[0.0], [0.0]]
-        @test payoff(Π_generic, x, 1) == payoff(Π_bilateral, x, 1)
+        @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
         x = [[10.0], [5.0]]
-        @test payoff(Π_generic, x, 1) == payoff(Π_bilateral, x, 1)
+        @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
         σ = DiscreteMixedStrategy.(x)
-        @test payoff(Π_generic, σ, 1) == payoff(Π_bilateral, σ, 1)
+        @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
         σ = [
             DiscreteMixedStrategy([0.5, 0.5], [[1], [0]]),
             DiscreteMixedStrategy([0.25, 0.75], [[5], [10]]),
         ]
-        @test payoff(Π_generic, σ, 1) == payoff(Π_bilateral, σ, 1)
+        @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
     end
 
     @testset "DiscreteMixedStrategy" begin
@@ -122,7 +127,7 @@ end
         @variable(X1, x1, start=10.0)
         @constraint(X1, x1 >= 0)
 
-        player = Player(X1, QuadraticPayoff(0, [2, 1]), 1)
+        player = Player(X1, QuadraticPayoff(0, [2, 1], 1), 1)
 
         filename = "test_player.json"
         IPG.save(player, filename)
@@ -158,11 +163,11 @@ end
         # guarantee reproducibility (always start with player 1)
         IPG.get_player_order = IPG.get_player_order_fixed_descending
 
-        P1 = Player(QuadraticPayoff(0, [2, 1]), 1)
+        P1 = Player(QuadraticPayoff(0, [2, 1], 1), 1)
         @variable(P1.Xp, x1, start=10.0)
         @constraint(P1.Xp, x1 >= 0)
 
-        P2 = Player(QuadraticPayoff(0, [1, 2]), 2)
+        P2 = Player(QuadraticPayoff(0, [1, 2], 2), 2)
         @variable(P2.Xp, x2, start=10.0)
         @constraint(P2.Xp, x2 >= 0)
 

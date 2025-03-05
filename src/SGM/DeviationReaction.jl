@@ -8,10 +8,10 @@ function find_deviation_best_response(players::Vector{<:AbstractPlayer}, σ::Vec
     for p in player_order
         player = players[p]
         new_x_p = best_response(player, σ)
+        σp = σ[p]
+        σ_others = others(σ, p)
 
-        new_σ = copy(σ)
-        new_σ[p] = DiscreteMixedStrategy([1], [new_x_p])
-        payoff_improvement = payoff(player.Πp, new_σ, player.p) - payoff(player.Πp, σ, player.p)
+        payoff_improvement = payoff(player.Πp, new_x_p, σ_others) - payoff(player.Πp, σp, σ_others)
         if payoff_improvement > dev_tol
             return payoff_improvement, p, new_x_p
         end
