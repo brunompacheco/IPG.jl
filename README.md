@@ -10,12 +10,11 @@ Implementation of the sampled generation method (SGM) for equilibria computation
 
 ## Example
 
-<!-- TODO: update to new payoff signature -->
 This example is based on Example 5.3, from Carvalho, Lodi, and Pedroso (2020).
 ```julia
 julia> using IPG
 
-julia> player_1 = Player(QuadraticPayoff(0, [2, 1]), 1);
+julia> player_1 = Player(QuadraticPayoff(0, [2, 1], 1), 1);
 
 julia> @variable(player_1.Xp, x1, start=10)
 x1
@@ -23,7 +22,7 @@ x1
 julia> @constraint(player_1.Xp, x1 >= 0)
 x1 ≥ 0
 
-julia> player_2 = Player(QuadraticPayoff(0, [1, 2]), 2);
+julia> player_2 = Player(QuadraticPayoff(0, [1, 2], 2), 2);
 
 julia> @variable(player_2.Xp, x2, start=10)
 x2
@@ -35,8 +34,8 @@ julia> Σ, payoff_improvements = IPG.SGM([player_1, player_2], SCIP.Optimizer, m
 
 julia> Σ[end]
 2-element Vector{DiscreteMixedStrategy}:
- DiscreteMixedStrategy([1.0], [[1.25]])
  DiscreteMixedStrategy([1.0], [[0.625]])
+ DiscreteMixedStrategy([1.0], [[1.25]])
 
 ```
 Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
