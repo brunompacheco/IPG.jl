@@ -18,6 +18,28 @@ function Player(Πp::Payoff, p::Integer) where Payoff <: AbstractPayoff
     return Player{Payoff}(Model(), Πp, p)
 end
 
+# TODO: clarify in the README how the variables are passed from the model to the payoff function.
+"""
+Get all player registered variables (`xp`, for the payoff function).
+
+This function differs from `JuMP.all_variables(player.Xp)` in that it returns the variables
+in their container. It uses the model's object dictionary, so we will only get registered
+variables.
+"""
+function variables(player::AbstractPlayer)
+    # TODO: I'm not quite sure which is best, but another way of doing this would be to get
+    # the return from `all_variables` and whenever we get a name that is registered, we
+    # replace it (and all its occurences) by the object in the dictionary. I don't know
+    # which is best for the user though.
+    vars = [
+        v for v in values(object_dictionary(player.Xp))
+        if (v isa VariableRef) | (v isa AbstractArray{VariableRef})
+    ]
+
+    sort!(vars, by=v -> findfirst(u -> u == (v isa VariableRef ? v : first(v)), all_variables(player.Xp)))
+end
+
+
 "Check whether an optimizer has already been set for player."
 function has_optimizer(player::AbstractPlayer)
     return ~(backend(player.Xp).state == JuMP.MOIU.NO_OPTIMIZER)
@@ -29,14 +51,14 @@ function set_optimizer(player::AbstractPlayer, optimizer_factory)
 end
 
 "Compute `player`'s best response to the pure strategy profile `x`."
-function best_response(player::Player{<:AbstractPayoff}, x::Vector{<:Vector{<:Real}})
+function best_response(player::Player{<:AbstractPayoff}, x::Vector{<:PureStrategy})
     return best_response(player, DiscreteMixedStrategy.(x))
 end
 
 "Compute `player`'s best response to the mixed strategy profile `σp`."
-function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixedStrategy})
+function best_response(player::Player{<:AbstractPayoff}, σ::Vector{<:DiscreteMixedStrategy})
     # TODO: I think we could take only `σ_others` as argument
-    xp = all_variables(player.Xp)
+    xp = variables(player)
 
     σ_others = others(σ, player.p)
     obj = expected_value(x_others -> payoff(player.Πp, xp, x_others), σ_others)
@@ -50,8 +72,8 @@ function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixe
 
     return value.(xp)
 end
-function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{DiscreteMixedStrategy})
-    xp = all_variables(player.Xp)
+function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{<:DiscreteMixedStrategy})
+    xp = variables(player)
 
     # TODO: No idea why this doesn't work
     # @objective(model, Max, sum([IPG.bilateral_payoff(Πp, p, xp, k, σ[k]) for k in 1:m]))
@@ -81,7 +103,7 @@ function find_feasible_pure_strategy(player::AbstractPlayer)
     set_silent(player.Xp)
     optimize!(player.Xp)
 
-    return value.(all_variables(player.Xp))
+    return value.(variables(player))
 end
 
 "Solve the feasibility problem of all players, returning a feasible profile."

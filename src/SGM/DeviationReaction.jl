@@ -1,6 +1,6 @@
 
 "Find a deviation from mixed profile `σ`."
-function find_deviation_best_response(players::Vector{<:AbstractPlayer}, σ::Vector{DiscreteMixedStrategy}; player_order=nothing, dev_tol=1e-3)::Tuple{Float64,Int64,Union{Nothing,Vector{Float64}}}
+function find_deviation_best_response(players::Vector{<:AbstractPlayer}, σ::Vector{<:DiscreteMixedStrategy}; player_order=nothing, dev_tol=1e-3)::Tuple{Float64,Int64,Union{Nothing,PureStrategy}}
     if isnothing(player_order)
         player_order = eachindex(players)
     end

@@ -42,11 +42,11 @@ function QuadraticPayoff(cp::Real, Qp::Vector{<:Real}, p::Integer)
 end
 
 "Compute the individual payoff (independent utility) of strategy `xp`."
-function bilateral_payoff(Πp::QuadraticPayoff, xp::Vector{<:Any})
+function bilateral_payoff(Πp::QuadraticPayoff, xp::PureStrategy)
     return Πp.cp' * xp - 0.5 * xp' * Πp.Qp[Πp.p] * xp
 end
 "Compute each component of the payoff with respect to player `k`."
-function bilateral_payoff(Πp::QuadraticPayoff, xp::Vector{<:Any}, xk::Vector{<:Any}, k::Integer)
+function bilateral_payoff(Πp::QuadraticPayoff, xp::PureStrategy, xk::PureStrategy, k::Integer)
     return xk' * Πp.Qp[k] * xp
 end
 
@@ -56,10 +56,10 @@ end
 function bilateral_payoff(Πp::AbstractBilateralPayoff, σp::DiscreteMixedStrategy)
     return expected_value(xp -> bilateral_payoff(Πp, xp), σp)
 end
-function bilateral_payoff(Πp::AbstractBilateralPayoff, xp::Vector{<:Any}, σk::DiscreteMixedStrategy, k::Integer)
+function bilateral_payoff(Πp::AbstractBilateralPayoff, xp::PureStrategy, σk::DiscreteMixedStrategy, k::Integer)
     return expected_value(xk -> bilateral_payoff(Πp, xp, xk, k), σk)
 end
-function bilateral_payoff(Πp::AbstractBilateralPayoff, σp::DiscreteMixedStrategy, xk::Vector{<:Any}, k::Integer)
+function bilateral_payoff(Πp::AbstractBilateralPayoff, σp::DiscreteMixedStrategy, xk::PureStrategy, k::Integer)
     return expected_value(xp -> bilateral_payoff(Πp, xp, xk, k), σp)
 end
 function bilateral_payoff(Πp::AbstractBilateralPayoff, σp::DiscreteMixedStrategy, σk::DiscreteMixedStrategy, k::Integer)
@@ -67,7 +67,7 @@ function bilateral_payoff(Πp::AbstractBilateralPayoff, σp::DiscreteMixedStrate
 end
 
 "Compute the payoff of playing `xp` given that the other players play `x_others`."
-function payoff(Πp::AbstractBilateralPayoff, xp::Vector{<:Any}, x_others::Vector{<:Vector{<:Any}})
+function payoff(Πp::AbstractBilateralPayoff, xp::PureStrategy, x_others::Vector{<:PureStrategy})
     payoff_value = bilateral_payoff(Πp, xp)
     for k in 1:(length(x_others)+1)
         if k < Πp.p

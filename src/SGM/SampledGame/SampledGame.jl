@@ -2,9 +2,9 @@
 abstract type AbstractSampledGame end
 
 mutable struct GenericSampledGame <: AbstractSampledGame
-    S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
+    S_X::Vector{<:Vector{<:PureStrategy}}  # sample of strategies (finite subset of the strategy space X)
 end
-function GenericSampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function GenericSampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:PureStrategy}})
     error("Not implemented yet.")
 
     # if length(players) == 2
@@ -14,12 +14,12 @@ function GenericSampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vec
     # end
 end
 
-function add_new_strategy!(sg::GenericSampledGame, players::Vector{<:AbstractPlayer}, new_xp::Vector{<:Real}, p::Integer)
+function add_new_strategy!(sg::GenericSampledGame, players::Vector{<:AbstractPlayer}, new_xp::PureStrategy, p::Integer)
     push!(sg.S_X[p], new_xp)
 end
 
 "Compute polymatrix for normal form game from sample of strategies."
-function get_polymatrix(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function get_polymatrix(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:PureStrategy}})
     polymatrix = Dict{Tuple{Integer, Integer}, Matrix{Float64}}()
 
     # compute utility of each player `p` using strategy `i_p` against player `k` using strategy `i_k`
@@ -46,7 +46,7 @@ function get_polymatrix(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_
     return polymatrix
 end
 
-function get_polymatrix(player1::AbstractPlayer, player2::AbstractPlayer, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function get_polymatrix(player1::AbstractPlayer, player2::AbstractPlayer, S_X::Vector{<:Vector{<:PureStrategy}})
     p = player1.p
     k = player2.p
 
@@ -72,20 +72,20 @@ end
 
 "Normal-form polymatrix representation of the sampled game."
 mutable struct PolymatrixSampledGame <: AbstractSampledGame
-    S_X::Vector{Vector{Vector{Float64}}}  # sample of strategies (finite subset of the strategy space X)
+    S_X::Vector{<:Vector{<:PureStrategy}}  # sample of strategies (finite subset of the strategy space X)
     polymatrix::Dict{Tuple{Int, Int}, Matrix{Float64}}
 end
 
-function PolymatrixSampledGame(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function PolymatrixSampledGame(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_X::Vector{<:Vector{<:PureStrategy}})
     return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
 end
-function PolymatrixSampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:Vector{<:Real}}})
+function PolymatrixSampledGame(players::Vector{<:AbstractPlayer}, S_X::Vector{<:Vector{<:PureStrategy}})
     @assert length(players) == 2  "Cannot build polymatrix for more than two players unless their payoffs are bilatera (see `BilateralPayoff`)"
 
     return PolymatrixSampledGame(S_X, get_polymatrix(players[1], players[2], S_X))
 end
 
-function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<:AbstractBilateralPayoff}}, new_xp::Vector{<:Real}, p::Integer)
+function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<:AbstractBilateralPayoff}}, new_xp::PureStrategy, p::Integer)
     # first part is easy, just add the new strategy to the set
     push!(sg.S_X[p], new_xp)
     strat = length.(sg.S_X)
@@ -120,7 +120,7 @@ function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<
         end
     end
 end
-function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:AbstractPlayer}, new_xp::Vector{<:Real}, p::Integer)
+function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:AbstractPlayer}, new_xp::PureStrategy, p::Integer)
     # this should be just a sanity check, a PolymatrixSampledGame should never be built if
     # the game is being played by more than two players
     @assert length(players) == 2  "Cannot build polymatrix for more than two players unless their payoffs are bilatera (see `BilateralPayoff`)"
