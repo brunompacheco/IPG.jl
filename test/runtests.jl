@@ -195,4 +195,22 @@ end
             (2, 0.87890625)
         ]))
     end
+
+    @testset "README Example Test" begin
+        player_1 = Player(QuadraticPayoff(0, [2, 1], 1), 1)
+
+        @variable(player_1.Xp, x1, start=10)
+        @constraint(player_1.Xp, x1 >= 0)
+
+        player_2 = Player(QuadraticPayoff(0, [1, 2], 2), 2)
+
+        @variable(player_2.Xp, x2, start=10)
+        @constraint(player_2.Xp, x2 >= 0)
+
+        Σ, payoff_improvements = IPG.SGM([player_1, player_2], SCIP.Optimizer, max_iter=5)
+
+        # Verify the final strategies match the expected values
+        @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
+        @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
+    end
 end

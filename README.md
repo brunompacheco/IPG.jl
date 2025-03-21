@@ -39,7 +39,6 @@ julia> Σ[end]
 
 ```
 Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
-<!-- TODO: add test to guarantee that the example above returns these precise values -->
 
 <!-- TODO: present two-player games -->
 
