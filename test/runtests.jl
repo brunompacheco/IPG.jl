@@ -213,4 +213,23 @@ end
         @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
         @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
     end
+
+    @testset "README Example Two-player" begin
+        player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
+
+        players = [
+            Player(BlackBoxPayoff(player_payoff), 1),
+            Player(BlackBoxPayoff(player_payoff), 2)
+        ];
+
+        @variable(players[1].Xp, x1, start=10); @constraint(players[1].Xp, x1 >= 0);
+
+        @variable(players[2].Xp, x2, start=10); @constraint(players[2].Xp, x2 >= 0);
+
+        Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
+
+        # Verify the final strategies match the expected values
+        @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
+        @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
+    end
 end

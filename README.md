@@ -8,7 +8,11 @@ Implementation of the sampled generation method (SGM) for equilibria computation
 
 [*M. Carvalho, A. Lodi, J. P. Pedroso, "Computing Nash equilibria for integer programming games". 2020. arXiv:2012.07082*](https://arxiv.org/abs/2012.07082)
 
-## Example
+## Bilateral payoff games
+
+The algorithm is particularly designed for games in which the player have bilaterally-separable payoff functions. This is due to the standard solution method for solving sampled games, which relies on normal form games formulated through the polymatrix. An example of such is the [`QuadraticPayoff`](src/Game/Payoff/BilateralPayoff.jl#L27) structure, which implements the payoff function structure used in the original paper's experiments.
+
+### Example
 
 This example is based on Example 5.3, from Carvalho, Lodi, and Pedroso (2020).
 ```julia
@@ -40,7 +44,36 @@ julia> Σ[end]
 ```
 Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
 
-<!-- TODO: present two-player games -->
+## Two-player games
+
+A particular case of bilateral payoff functions that can be handled more generally are two-player games. In this case, because any payoff function is bilateral, we handle the more general [`BlackBoxPayoff`](src/Game/Payoff/Payoff.jl#29) through the SGM algorithm.
+
+### Example
+
+Example 5.3 implemented using the BlackBoxPayoff structure.
+```julia
+julia> using IPG, SCIP
+
+julia> player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
+player_payoff (generic function with 1 method)
+
+julia> players = [
+           Player(BlackBoxPayoff(player_payoff), 1),
+           Player(BlackBoxPayoff(player_payoff), 2)
+       ];
+
+julia> @variable(players[1].Xp, x1, start=10); @constraint(players[1].Xp, x1 >= 0);
+
+julia> @variable(players[2].Xp, x2, start=10); @constraint(players[2].Xp, x2 >= 0);
+
+julia> Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
+
+julia> Σ[end]
+2-element Vector{DiscreteMixedStrategy}:
+ DiscreteMixedStrategy([1.0], [[0.625]])
+ DiscreteMixedStrategy([1.0], [[1.25]])
+
+```
 
 ## Customization
 
