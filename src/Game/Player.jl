@@ -6,6 +6,11 @@ abstract type AbstractPlayer end
 struct Player{Payoff<:AbstractPayoff} <: AbstractPlayer
     "Strategy space."
     Xp::Model
+    """Strategy space variables.
+    TODO: The idea is that the user will pass the player's variables to the constructor, so
+    that it will be used to define the payoff function's arguments. See https://discourse.julialang.org/t/getting-jump-model-variables-and-containers-in-order-of-creation/127245/2
+    """
+    xp::AbstractArray{Union{VariableRef, AbstractArray{VariableRef}}, 1}
     "Payoff function."
     Πp::Payoff
     "Player's index."
