@@ -8,31 +8,59 @@ Implementation of the sampled generation method (SGM) for equilibria computation
 
 [*M. Carvalho, A. Lodi, J. P. Pedroso, "Computing Nash equilibria for integer programming games". 2020. arXiv:2012.07082*](https://arxiv.org/abs/2012.07082)
 
-## Bilateral payoff games
+## Game definition
+
+A game is any list of players. To define a player, you must define the strategy space and the payoff function. The strategy space is handled through JuMP models, while payoff functions are handled by our structures (see Bilateral payoff games below for examples). Additionally, we need to keep track of references for the decision variables and the index of each player in the game.
+
+The following illustratest the necessary steps to define a player:
+```julia
+using IPG
+Xp = Model()
+
+@variable(Xp, y[1:5], Int)
+@variable(Xp, z >= 0)
+
+@constraint(Xp, ...)  # add your constraints
+
+Πp = QuadraticPayoff(...)  # payoff definition
+
+player = Player(Xp, [z], Πp, 1)  # add first player
+```
+Note that not all variables have to be provided to the Player definition, only those necessary to compute the payoff. <!-- TODO: See payoff section -->
+
+## Payoff Functions
+
+Properly defining the payoff functions are key for the workings of this implementation. Currently, two types of payoff functions are implemented: quadratic and blackbox, which are illustrated in the examples bellow. The former follows the notation of the original paper and allows for any game definition (in terms of constraints) that your solver of choice supports. The latter only works for two-player games. See `src/Game/Payoff` for more details.
+
+## Examples
+
+### Bilateral payoff games
 
 The algorithm is particularly designed for games in which the player have bilaterally-separable payoff functions. This is due to the standard solution method for solving sampled games, which relies on normal form games formulated through the polymatrix. An example of such is the [`QuadraticPayoff`](src/Game/Payoff/BilateralPayoff.jl#L27) structure, which implements the payoff function structure used in the original paper's experiments.
-
-### Example
 
 This example is based on Example 5.3, from Carvalho, Lodi, and Pedroso (2020).
 ```julia
 julia> using IPG
 
-julia> player_1 = Player(QuadraticPayoff(0, [2, 1], 1), 1);
+julia> X1 = Model();
 
-julia> @variable(player_1.Xp, x1, start=10)
+julia> @variable(X1, x1, start=10)
 x1
 
-julia> @constraint(player_1.Xp, x1 >= 0)
+julia> @constraint(X1, x1 >= 0)
 x1 ≥ 0
 
-julia> player_2 = Player(QuadraticPayoff(0, [1, 2], 2), 2);
+julia> player_1 = Player(X1, [x1], QuadraticPayoff(0, [2, 1], 1), 1);
 
-julia> @variable(player_2.Xp, x2, start=10)
+julia> X2 = Model();
+
+julia> @variable(X2, x2, start=10)
 x2
 
-julia> @constraint(player_2.Xp, x2 >= 0)
+julia> @constraint(X2, x2 >= 0)
 x2 ≥ 0
+
+julia> player_2 = Player(X2, [x2], QuadraticPayoff(0, [1, 2], 2), 2);
 
 julia> Σ, payoff_improvements = IPG.SGM([player_1, player_2], SCIP.Optimizer, max_iter=5);
 
@@ -44,11 +72,9 @@ julia> Σ[end]
 ```
 Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
 
-## Two-player games
+### Two-player games
 
 A particular case of bilateral payoff functions that can be handled more generally are two-player games. In this case, because any payoff function is bilateral, we handle the more general [`BlackBoxPayoff`](src/Game/Payoff/Payoff.jl#29) through the SGM algorithm.
-
-### Example
 
 Example 5.3 implemented using the BlackBoxPayoff structure.
 ```julia
@@ -57,14 +83,14 @@ julia> using IPG, SCIP
 julia> player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
 player_payoff (generic function with 1 method)
 
+julia> X1 = Model(); @variable(X1, x1, start=10); @constraint(X1, x1 >= 0);
+
+julia> X2 = Model(); @variable(X2, x2, start=10); @constraint(X2, x2 >= 0);
+
 julia> players = [
-           Player(BlackBoxPayoff(player_payoff), 1),
-           Player(BlackBoxPayoff(player_payoff), 2)
+           Player(X1, [x1], BlackBoxPayoff(player_payoff), 1),
+           Player(X2, [x2], BlackBoxPayoff(player_payoff), 2)
        ];
-
-julia> @variable(players[1].Xp, x1, start=10); @constraint(players[1].Xp, x1 >= 0);
-
-julia> @variable(players[2].Xp, x2, start=10); @constraint(players[2].Xp, x2 >= 0);
 
 julia> Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
 
