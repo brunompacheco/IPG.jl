@@ -19,10 +19,10 @@ function SGM(players::Vector{<:AbstractPlayer}, optimizer_factory; max_iter=100,
     # solved
 
     S_X = initialize_strategies(players)
-    sampled_game = SampledGame(players, S_X)
     if verbose
         println("Game initialized with strategies: ", S_X)
     end
+    sampled_game = SampledGame(players, S_X)
 
     Σ_S = Vector{Vector{DiscreteMixedStrategy}}()  # candidate equilibria
     payoff_improvements = Vector{Tuple{Integer,Float64}}()

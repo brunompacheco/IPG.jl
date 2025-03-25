@@ -49,7 +49,7 @@ function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixe
     set_silent(player.X)
     optimize!(player.X)
 
-    return value.(xp)
+    return [value.(v) for v in xp]
 end
 function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{DiscreteMixedStrategy})
     xp = player.vars
@@ -82,7 +82,7 @@ function find_feasible_pure_strategy(player::AbstractPlayer)
     set_silent(player.X)
     optimize!(player.X)
 
-    return value.(player.vars)
+    return [value.(v) for v in player.vars]
 end
 
 "Solve the feasibility problem of all players, returning a feasible profile."
