@@ -40,9 +40,9 @@ function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound:
 
         # build strategy space
         Xp = Model()
-        @variable(Xp, lower_bound <= x[1:m] <= upper_bound, Int)
+        @variable(Xp, lower_bound <= xp[1:m] <= upper_bound, Int)
 
-        push!(players, Player(Xp, Πp, p))
+        push!(players, Player(Xp, xp, Πp, p))
     end
 
     return players
@@ -54,20 +54,22 @@ end
 
         bilateral_players = generate_random_instance(2, 2, -5, 5)
         for player in bilateral_players
-            for variable in all_variables(player.Xp)
+            for variable in player.vars
                 set_start_value(variable, 1.0)
             end
         end
 
         # "black-box" function for blackbox payoff players
         function get_blackbox_function(p)
-            return (xp, x_others) -> payoff(bilateral_players[p].Πp, xp, x_others)
+            return (xp, x_others) -> payoff(bilateral_players[p].Π, xp, x_others)
         end
 
-        blackbox_players = [
-            Player(copy(player.Xp), BlackBoxPayoff(get_blackbox_function(player.p)), player.p)
-            for player in bilateral_players
-        ]
+        blackbox_players = []
+        for player in bilateral_players
+            Xp = copy(player.X)
+            # TODO: continue from here. I don't know if this player copy approach will work.
+            push!(blackbox_players, Player(Xp, all_variables(Xp), BlackBoxPayoff(get_blackbox_function(player.p)), player.p))
+        end
 
         Σ_bilateral, poff_imp_bilateral = IPG.SGM(bilateral_players, SCIP.Optimizer, max_iter=10)
         Σ_blackbox, poff_imp_blackbox = IPG.SGM(blackbox_players, SCIP.Optimizer, max_iter=10)

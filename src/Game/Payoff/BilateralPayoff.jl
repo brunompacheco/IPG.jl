@@ -2,6 +2,10 @@
 """
 A bilateral payoff can be computed as the sum of bilateral interactions between the players.
 
+Warning: this payoff function expect all players to have a single vector variable. In other
+    words, it won't work if your players have more complex container variables or multiple
+    vector variables.
+
 If all players have bilateral payoffs, an equilibrium for the sampled game can be solved
     using its polymatrix representation, which yields an efficient formulation for the
     optimization problem.
@@ -12,8 +16,8 @@ It is expected that each bilateral payoff type implements the `bilateral_payoff`
 ```julia
 bilateral_payoff(Πp::MyBilateralPayoff, xp::Vector{<:Any})
 ```
-The second method must implement the payoff of a strategy with respect to the strategy of another player (`k`).
-    It must have the following signature:
+The second method must implement the payoff of a strategy with respect to the strategy of
+    another player (`k`). It must have the following signature:
 ```julia
 bilateral_payoff(Πp::MyBilateralPayoff, xp::Vector{<:Union{Real,VariableRef}}, xk::Vector{<:Real}, k::Integer)
 ```

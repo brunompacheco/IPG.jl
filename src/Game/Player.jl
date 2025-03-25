@@ -5,32 +5,28 @@ abstract type AbstractPlayer end
 "A player in an IPG."
 struct Player{Payoff<:AbstractPayoff} <: AbstractPlayer
     "Strategy space."
-    Xp::Model
+    X::Model
     """Strategy space variables.
     TODO: The idea is that the user will pass the player's variables to the constructor, so
     that it will be used to define the payoff function's arguments. See https://discourse.julialang.org/t/getting-jump-model-variables-and-containers-in-order-of-creation/127245/2
     """
-    xp::AbstractArray{Union{VariableRef, AbstractArray{VariableRef}}, 1}
+    vars::AbstractArray{Union{VariableRef, AbstractArray{VariableRef}}, 1}
     "Payoff function."
-    Πp::Payoff
+    Π::Payoff
     "Player's index."
     p::Integer  # TODO: this could be Any, to allow for more general collections, e.g, string names
     # TODO: maybe I could just index everything relevant as a Dict{Player, T}?
     # TODO: I think with the new signature for the payoff functions the index is no longer needed
 end
-"Initialize player with empty strategy space."
-function Player(Πp::Payoff, p::Integer) where Payoff <: AbstractPayoff
-    return Player{Payoff}(Model(), Πp, p)
-end
 
 "Check whether an optimizer has already been set for player."
 function has_optimizer(player::AbstractPlayer)
-    return ~(backend(player.Xp).state == JuMP.MOIU.NO_OPTIMIZER)
+    return ~(backend(player.X).state == JuMP.MOIU.NO_OPTIMIZER)
 end
 
 "Define the optimizer for player."
 function set_optimizer(player::AbstractPlayer, optimizer_factory)
-    JuMP.set_optimizer(player.Xp, optimizer_factory)
+    JuMP.set_optimizer(player.X, optimizer_factory)
 end
 
 "Compute `player`'s best response to the pure strategy profile `x`."
@@ -41,52 +37,52 @@ end
 "Compute `player`'s best response to the mixed strategy profile `σp`."
 function best_response(player::Player{<:AbstractPayoff}, σ::Vector{DiscreteMixedStrategy})
     # TODO: I think we could take only `σ_others` as argument
-    xp = all_variables(player.Xp)
+    xp = player.vars
 
     σ_others = others(σ, player.p)
-    obj = expected_value(x_others -> payoff(player.Πp, xp, x_others), σ_others)
+    obj = expected_value(x_others -> payoff(player.Π, xp, x_others), σ_others)
 
     # I don't know why, but it was raising an error without changing the sense to feasibility first
-    set_objective_sense(player.Xp, JuMP.MOI.FEASIBILITY_SENSE)
-    @objective(player.Xp, JuMP.MOI.MAX_SENSE, obj)
+    set_objective_sense(player.X, JuMP.MOI.FEASIBILITY_SENSE)
+    @objective(player.X, JuMP.MOI.MAX_SENSE, obj)
 
-    set_silent(player.Xp)
-    optimize!(player.Xp)
+    set_silent(player.X)
+    optimize!(player.X)
 
     return value.(xp)
 end
 function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{DiscreteMixedStrategy})
-    xp = all_variables(player.Xp)
+    xp = player.vars
 
     # TODO: No idea why this doesn't work
-    # @objective(model, Max, sum([IPG.bilateral_payoff(Πp, p, xp, k, σ[k]) for k in 1:m]))
+    # @objective(model, Max, sum([IPG.bilateral_payoff(Π, p, xp, k, σ[k]) for k in 1:m]))
 
     obj = AffExpr()
     for k in eachindex(σ)
         if k == player.p
-            obj += IPG.bilateral_payoff(player.Πp, xp)
+            obj += IPG.bilateral_payoff(player.Π, xp)
         else
-            obj += IPG.bilateral_payoff(player.Πp, xp, σ[k], k)
+            obj += IPG.bilateral_payoff(player.Π, xp, σ[k], k)
         end
     end
     # I don't know why, but it was raising an error without changing the sense to feasibility first
-    set_objective_sense(player.Xp, JuMP.MOI.FEASIBILITY_SENSE)
-    @objective(player.Xp, JuMP.MOI.MAX_SENSE, obj)
+    set_objective_sense(player.X, JuMP.MOI.FEASIBILITY_SENSE)
+    @objective(player.X, JuMP.MOI.MAX_SENSE, obj)
 
-    set_silent(player.Xp)
-    optimize!(player.Xp)
+    set_silent(player.X)
+    optimize!(player.X)
 
     return value.(xp)
 end
 
 "Solve the feasibility problem for a player, returning a feasible strategy."
 function find_feasible_pure_strategy(player::AbstractPlayer)
-    @objective(player.Xp, JuMP.MOI.FEASIBILITY_SENSE, 0)
+    @objective(player.X, JuMP.MOI.FEASIBILITY_SENSE, 0)
 
-    set_silent(player.Xp)
-    optimize!(player.Xp)
+    set_silent(player.X)
+    optimize!(player.X)
 
-    return value.(all_variables(player.Xp))
+    return value.(player.vars)
 end
 
 "Solve the feasibility problem of all players, returning a feasible profile."
@@ -95,8 +91,9 @@ function find_feasible_pure_profile(players::Vector{<:AbstractPlayer})
 end
 
 function save(player::Player{QuadraticPayoff}, filename::String)
+    error("Not implemented")  # TODO: this has not been updated after the player.vars refactor
     # we need to ensure that the file is stored as a json, so we can add the payoff information
-    JuMP.write_to_file(player.Xp, filename; format = JuMP.MOI.FileFormats.FORMAT_MOF)
+    JuMP.write_to_file(player.X, filename; format = JuMP.MOI.FileFormats.FORMAT_MOF)
 
     # TODO: this could be refactored as a payoff JSON-serialization method
     # see https://quinnj.github.io/JSON3.jl/stable/#Struct-API
@@ -105,11 +102,11 @@ function save(player::Player{QuadraticPayoff}, filename::String)
 
     mof_json[:IPG__player_index] = player.p
     mof_json[:IPG__payoff] = Dict(
-        :cp => player.Πp.cp,
-        :Qp => player.Πp.Qp,
+        :cp => player.Π.cp,
+        :Qp => player.Π.Qp,
         # JSON3 cannot store matrices, it stores them as a flat vector
-        :Qp_shapes => [size(Qpk) for Qpk in player.Πp.Qp],
-        :p => player.Πp.p,
+        :Qp_shapes => [size(Qpk) for Qpk in player.Π.Qp],
+        :p => player.Π.p,
     )
 
     open(filename, "w") do file
@@ -118,10 +115,11 @@ function save(player::Player{QuadraticPayoff}, filename::String)
 end
 
 function load(filename::String)::Player{QuadraticPayoff}
-    Xp = JuMP.read_from_file(filename; format = JuMP.MOI.FileFormats.FORMAT_MOF)
+    error("Not implemented")  # TODO: this has not been updated after the player.vars refactor
+    X = JuMP.read_from_file(filename; format = JuMP.MOI.FileFormats.FORMAT_MOF)
     
     # see https://github.com/jump-dev/JuMP.jl/issues/3946
-    set_start_value.(all_variables(Xp), start_value.(all_variables(Xp)))
+    set_start_value.(all_variables(X), start_value.(all_variables(X)))
 
     mof_json = JSON3.read(read(filename, String))
 
@@ -134,5 +132,5 @@ function load(filename::String)::Player{QuadraticPayoff}
 
     Qp = [reshape(flat_Qpk, Tuple(Qpk_shape)) for (flat_Qpk, Qpk_shape) in zip(flat_Qp, Qp_shapes)]
 
-    return Player{QuadraticPayoff}(Xp, QuadraticPayoff(cp, Qp, payoff_index), player_index)
+    return Player{QuadraticPayoff}(X, QuadraticPayoff(cp, Qp, payoff_index), player_index)
 end

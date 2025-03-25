@@ -11,7 +11,7 @@ function find_deviation_best_response(players::Vector{<:AbstractPlayer}, σ::Vec
         σp = σ[p]
         σ_others = others(σ, p)
 
-        payoff_improvement = payoff(player.Πp, new_x_p, σ_others) - payoff(player.Πp, σp, σ_others)
+        payoff_improvement = payoff(player.Π, new_x_p, σ_others) - payoff(player.Π, σp, σ_others)
         if payoff_improvement > dev_tol
             return payoff_improvement, p, new_x_p
         end
