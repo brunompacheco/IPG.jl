@@ -27,11 +27,13 @@ function initialize_strategies_player_alone(players::Vector{<:AbstractPlayer})
                 push!(z, 0.0)
             elseif v isa AbstractArray{VariableRef}
                 push!(z, zeros(size(v)))
+            else
+                error("Variable type not supported: ", typeof(v))
             end
         end
         return z
     end
-    σ_dummy = [DiscreteMixedStrategy([1], zeros_like_vars(player)) for player in players]
+    σ_dummy = [DiscreteMixedStrategy(zeros_like_vars(player)) for player in players]
 
     for player in players
         xp_init = start_value.(player.vars)

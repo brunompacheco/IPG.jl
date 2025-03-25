@@ -2,6 +2,11 @@ using IPG
 using Test
 using LinearAlgebra, JuMP, SCIP
 
+""" The random instance generation procedure is based on
+> Dragotto, Gabriele, and Rosario Scatamacchia. “The Zero Regrets Algorithm: Optimizing over Pure Nash Equilibria via Integer Programming.” INFORMS Journal on Computing 35, no. 5 (September 2023): 1143–60. https://doi.org/10.1287/ijoc.2022.0282.
+
+The original can be seen in their repository: https://github.com/gdragotto/ZeroRegretsAlgorithm
+"""
 function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound::Int; i_type="H")
     factor = i_type == "H" ? 0.1 : 0.01
     RQ = 5
@@ -26,8 +31,8 @@ function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound:
         end
     end
 
-    # build players
-    players = Vector{Player{QuadraticPayoff}}()
+    # build players' parameters
+    players = []
     for p in 1:n
         # build payoff
         Qp = Vector{Matrix{Float64}}()
@@ -36,13 +41,7 @@ function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound:
         end
 
         cp = rand(-RQ:RQ, m)
-        Πp = QuadraticPayoff(cp, Qp, p)
-
-        # build strategy space
-        Xp = Model()
-        @variable(Xp, lower_bound <= xp[1:m] <= upper_bound, Int)
-
-        push!(players, Player(Xp, xp, Πp, p))
+        push!(players, [cp, Qp, p, m, lower_bound, upper_bound])
     end
 
     return players
@@ -52,11 +51,19 @@ end
     @testset "Two-player game" begin
         IPG.initialize_strategies = IPG.initialize_strategies_player_alone
 
-        bilateral_players = generate_random_instance(2, 2, -5, 5)
-        for player in bilateral_players
-            for variable in player.vars
-                set_start_value(variable, 1.0)
-            end
+        params = generate_random_instance(2, 2, -5, 5)
+
+        # build bilateral players
+        bilateral_players = Vector{Player{QuadraticPayoff}}()
+        for (cp, Qp, p, m, lower_bound, upper_bound) in params
+            Πp = QuadraticPayoff(cp, Qp, p)
+
+            # build strategy space
+            Xp = Model()
+            @variable(Xp, lower_bound <= xp[1:m] <= upper_bound, Int)
+            set_start_value.(xp, 1.0)
+
+            push!(bilateral_players, Player(Xp, xp, Πp, p))
         end
 
         # "black-box" function for blackbox payoff players
@@ -64,11 +71,17 @@ end
             return (xp, x_others) -> payoff(bilateral_players[p].Π, xp, x_others)
         end
 
-        blackbox_players = []
-        for player in bilateral_players
-            Xp = copy(player.X)
-            # TODO: continue from here. I don't know if this player copy approach will work.
-            push!(blackbox_players, Player(Xp, all_variables(Xp), BlackBoxPayoff(get_blackbox_function(player.p)), player.p))
+        # build blackbox players
+        blackbox_players = Vector{Player{BlackBoxPayoff}}()
+        for (cp, Qp, p, m, lower_bound, upper_bound) in params
+            Πp = BlackBoxPayoff((xp, x_others) -> payoff(QuadraticPayoff(cp, Qp, p), xp, x_others))
+
+            # build strategy space
+            Xp = Model()
+            @variable(Xp, lower_bound <= xp[1:m] <= upper_bound, Int)
+            set_start_value.(xp, 1.0)
+
+            push!(blackbox_players, Player(Xp, xp, Πp, p))
         end
 
         Σ_bilateral, poff_imp_bilateral = IPG.SGM(bilateral_players, SCIP.Optimizer, max_iter=10)
@@ -125,38 +138,39 @@ end
     end
 
     @testset "Player serialization" begin
-        X1 = Model()
-        @variable(X1, x1, start=10.0)
-        @constraint(X1, x1 >= 0)
+        # WARNING: support for serialization has been removed
+        # X1 = Model()
+        # @variable(X1, x1, start=10.0)
+        # @constraint(X1, x1 >= 0)
 
-        player = Player(X1, QuadraticPayoff(0, [2, 1], 1), 1)
+        # player = Player(X1, [x1], QuadraticPayoff(0, [2, 1], 1), 1)
 
-        filename = "test_player.json"
-        IPG.save(player, filename)
-        loaded_player = IPG.load(filename)
+        # filename = "test_player.json"
+        # IPG.save(player, filename)
+        # loaded_player = IPG.load(filename)
 
-        @test loaded_player.p == player.p
-        @test loaded_player.Πp.cp == player.Πp.cp
-        @test loaded_player.Πp.Qp == player.Πp.Qp
+        # @test loaded_player.p == player.p
+        # @test loaded_player.Π.cp == player.Π.cp
+        # @test loaded_player.Π.Qp == player.Π.Qp
 
-        # test strategy space
-        X1 = player.Xp
-        loaded_X1 = loaded_player.Xp
+        # # test strategy space
+        # X1 = player.X
+        # loaded_X1 = loaded_player.X
 
-        set_optimizer(X1, SCIP.Optimizer)
-        set_optimizer(loaded_X1, SCIP.Optimizer)
+        # set_optimizer(X1, SCIP.Optimizer)
+        # set_optimizer(loaded_X1, SCIP.Optimizer)
 
-        set_silent(X1)
-        optimize!(X1)
+        # set_silent(X1)
+        # optimize!(X1)
 
-        set_silent(loaded_X1)
-        optimize!(loaded_X1)
+        # set_silent(loaded_X1)
+        # optimize!(loaded_X1)
 
-        @test value.(all_variables(X1)) == value.(all_variables(loaded_X1))
-        @test objective_value(X1) == objective_value(loaded_X1)
+        # @test value.(player.vars) == value.(loaded_player.vars)
+        # @test objective_value(X1) == objective_value(loaded_X1)
 
-        # cleanup
-        rm(filename)
+        # # cleanup
+        # rm(filename)
     end
 
     @testset "Example 5.3" begin
@@ -165,13 +179,16 @@ end
         # guarantee reproducibility (always start with player 1)
         IPG.get_player_order = IPG.get_player_order_fixed_descending
 
-        P1 = Player(QuadraticPayoff(0, [2, 1], 1), 1)
-        @variable(P1.Xp, x1, start=10.0)
-        @constraint(P1.Xp, x1 >= 0)
+        X1 = Model()
+        @variable(X1, x1, start=10.0)
+        @constraint(X1, x1 >= 0)
 
-        P2 = Player(QuadraticPayoff(0, [1, 2], 2), 2)
-        @variable(P2.Xp, x2, start=10.0)
-        @constraint(P2.Xp, x2 >= 0)
+        P1 = Player(X1, [x1], QuadraticPayoff(0, [2, 1], 1), 1)
+
+        X2 = Model()
+        @variable(X2, x2, start=10.0)
+        @constraint(X2, x2 >= 0)
+        P2 = Player(X2, [x2], QuadraticPayoff(0, [1, 2], 2), 2)
 
         Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5);
 
@@ -199,15 +216,21 @@ end
     end
 
     @testset "README Example Test" begin
-        player_1 = Player(QuadraticPayoff(0, [2, 1], 1), 1)
+        X1 = Model()
+        @variable(X1, x1, start=10)
+        @constraint(X1, x1 >= 0)
 
-        @variable(player_1.Xp, x1, start=10)
-        @constraint(player_1.Xp, x1 >= 0)
+        Π1 = QuadraticPayoff(0, [2, 1], 1)
 
-        player_2 = Player(QuadraticPayoff(0, [1, 2], 2), 2)
+        player_1 = Player(X1, [x1], Π1, 1)
 
-        @variable(player_2.Xp, x2, start=10)
-        @constraint(player_2.Xp, x2 >= 0)
+        X2 = Model()
+        @variable(X2, x2, start=10)
+        @constraint(X2, x2 >= 0)
+
+        Π2 = QuadraticPayoff(0, [1, 2], 2)
+
+        player_2 = Player(X2, [x2], Π2, 2)
 
         Σ, payoff_improvements = IPG.SGM([player_1, player_2], SCIP.Optimizer, max_iter=5)
 
@@ -219,14 +242,15 @@ end
     @testset "README Example Two-player" begin
         player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
 
+        X1 = Model(); X2 = Model();
+
+        @variable(X1, x1, start=10); @constraint(X1, x1 >= 0);
+        @variable(X2, x2, start=10); @constraint(X2, x2 >= 0);
+
         players = [
-            Player(BlackBoxPayoff(player_payoff), 1),
-            Player(BlackBoxPayoff(player_payoff), 2)
+            Player(X1, [x1], BlackBoxPayoff(player_payoff), 1),
+            Player(X2, [x2], BlackBoxPayoff(player_payoff), 2)
         ];
-
-        @variable(players[1].Xp, x1, start=10); @constraint(players[1].Xp, x1 >= 0);
-
-        @variable(players[2].Xp, x2, start=10); @constraint(players[2].Xp, x2 >= 0);
 
         Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
 

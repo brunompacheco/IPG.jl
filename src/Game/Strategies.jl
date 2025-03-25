@@ -5,8 +5,8 @@ struct DiscreteMixedStrategy
     "Probability vector."
     probs::Vector{Float64}
     "Support (vector of strategies)."
-    supp::Vector{Vector{Float64}}
-    function DiscreteMixedStrategy(probs::Vector{<:Real}, supp::Vector{<:Vector{<:Real}})
+    supp::Vector{<:Any}
+    function DiscreteMixedStrategy(probs::Vector{<:Real}, supp::Vector{<:Any})
         if length(probs) != size(supp, 1)
             error("There must be as many probabilities as strategies in the support.")
         end
@@ -22,7 +22,7 @@ struct DiscreteMixedStrategy
     end
 end
 "Build mixed strategy from pure strategy."
-function DiscreteMixedStrategy(xp::Vector{<:Real})
+function DiscreteMixedStrategy(xp::Vector{<:Any})
     return DiscreteMixedStrategy([1.0], [xp])
 end
 Base.:(==)(σp1::DiscreteMixedStrategy, σp2::DiscreteMixedStrategy) = σp1.probs == σp2.probs && σp1.supp == σp2.supp

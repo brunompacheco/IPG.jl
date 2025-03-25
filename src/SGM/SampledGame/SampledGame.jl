@@ -34,8 +34,8 @@ function get_polymatrix(players::Vector{<:Player{<:AbstractBilateralPayoff}}, S_
                 for i_p in eachindex(S_X[p])
                     for i_k in eachindex(S_X[k])
                         polymatrix[p,k][i_p,i_k] = (
-                            IPG.bilateral_payoff(players[p].Πp, S_X[p][i_p], S_X[k][i_k], k)
-                            + IPG.bilateral_payoff(players[p].Πp, S_X[p][i_p])
+                            IPG.bilateral_payoff(players[p].Π, S_X[p][i_p], S_X[k][i_k], k)
+                            + IPG.bilateral_payoff(players[p].Π, S_X[p][i_p])
                         )
                     end
                 end
@@ -62,8 +62,8 @@ function get_polymatrix(player1::AbstractPlayer, player2::AbstractPlayer, S_X::V
     # compute polymatrix for two-player game
     for i_p in eachindex(S_X[p])
         for i_k in eachindex(S_X[k])
-            polymatrix[p,k][i_p,i_k] = payoff(player1.Πp, S_X[p][i_p], [S_X[k][i_k]])
-            polymatrix[k,p][i_k,i_p] = payoff(player2.Πp, S_X[k][i_k], [S_X[p][i_p]])
+            polymatrix[p,k][i_p,i_k] = payoff(player1.Π, S_X[p][i_p], [S_X[k][i_k]])
+            polymatrix[k,p][i_k,i_p] = payoff(player2.Π, S_X[k][i_k], [S_X[p][i_p]])
         end
     end
 
@@ -102,8 +102,8 @@ function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<
             for i in 1:strat[p1]
                 # compute utility of player `p1` using strategy `i` against the new strategy of player `p`
                 sg.polymatrix[p1,p][i,end] = (
-                    IPG.bilateral_payoff(players[p1].Πp, sg.S_X[p1][i], new_xp, p)
-                    + IPG.bilateral_payoff(players[p1].Πp, sg.S_X[p1][i])
+                    IPG.bilateral_payoff(players[p1].Π, sg.S_X[p1][i], new_xp, p)
+                    + IPG.bilateral_payoff(players[p1].Π, sg.S_X[p1][i])
                 )
             end
         elseif (p1 == p) & (p2 != p)
@@ -113,8 +113,8 @@ function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Player{<
             for i in 1:strat[p2]
                 # compute utility of player `p1` using strategy `i` against the new strategy of player `p`
                 sg.polymatrix[p,p2][end,i] = (
-                    IPG.bilateral_payoff(players[p].Πp, new_xp, sg.S_X[p2][i], p2)
-                    + IPG.bilateral_payoff(players[p].Πp, new_xp)
+                    IPG.bilateral_payoff(players[p].Π, new_xp, sg.S_X[p2][i], p2)
+                    + IPG.bilateral_payoff(players[p].Π, new_xp)
                 )
             end
         end
@@ -144,11 +144,11 @@ function add_new_strategy!(sg::PolymatrixSampledGame, players::Vector{<:Abstract
 
     for i in eachindex(sg.S_X[k])
         # compute new utilities of player `k` against the new strategy of player `p`
-        sg.polymatrix[k,p][i,end] = payoff(player_k.Πp, sg.S_X[k][i], [new_xp])
+        sg.polymatrix[k,p][i,end] = payoff(player_k.Π, sg.S_X[k][i], [new_xp])
 
         # compute new utilities of player `p` using the new strategy against the old
         # strategies of player `k`
-        sg.polymatrix[p,k][end,i] = payoff(player_p.Πp, new_xp, [sg.S_X[k][i]])
+        sg.polymatrix[p,k][end,i] = payoff(player_p.Π, new_xp, [sg.S_X[k][i]])
     end
 end
 

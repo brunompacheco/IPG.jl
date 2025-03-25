@@ -10,7 +10,7 @@ struct Player{Payoff<:AbstractPayoff} <: AbstractPlayer
     TODO: The idea is that the user will pass the player's variables to the constructor, so
     that it will be used to define the payoff function's arguments. See https://discourse.julialang.org/t/getting-jump-model-variables-and-containers-in-order-of-creation/127245/2
     """
-    vars::AbstractArray{Union{VariableRef, AbstractArray{VariableRef}}, 1}
+    vars::Vector{<:Union{VariableRef, AbstractArray{VariableRef}}}
     "Payoff function."
     Π::Payoff
     "Player's index."
