@@ -43,20 +43,6 @@ function expected_value(f::Function, σp::DiscreteMixedStrategy)
     return expectation
 end
 
-"Compute the expected value of a function given a discrete mixed profile."
-function expected_value(f::Function, σ::Vector{<:DiscreteMixedStrategy})
-    expectation = 0
-
-    # iterate over all possible _pure_ strategy profile
-    for (probs, x) in zip(Iterators.product([σp.probs for σp in σ]...), Iterators.product([σp.supp for σp in σ]...))
-        prob = prod(probs)
-        x = collect(x)  # convert tuple to vector
-        expectation += prob * f(x)
-    end
-
-    return expectation
-end
-
 # Utils
 
 function others(x::Vector{<:Any}, p::Integer)
