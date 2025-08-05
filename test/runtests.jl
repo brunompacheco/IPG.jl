@@ -216,6 +216,28 @@ end
         end
     end
 
+    @testset "Deviation reaction" begin
+        players = get_example_two_player_game()
+        for player in players
+            IPG.set_optimizer(player, SCIP.Optimizer)
+        end
+
+        S_X = IPG.initialize_strategies(players)
+        σ = Profile{DiscreteMixedStrategy}(player => S_X[player][1] for player in players)
+
+        for player in players
+            @test σ[player].supp == [[10.0]]  # has to be the start value
+        end
+
+        payoff_improvement, player, new_x_p = IPG.find_deviation(players, σ)
+
+        previous_payoff = payoff(player, σ[player], others(σ, player))
+        new_payoff = payoff(player, new_x_p, others(σ, player))
+
+        @test payoff_improvement == new_payoff - previous_payoff
+        @test payoff_improvement > 0.0  # there should be a deviation
+    end
+
     @testset "Player serialization" begin
         X1 = Model()
         @variable(X1, x1, start=10.0)
