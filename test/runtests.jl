@@ -150,6 +150,11 @@ end
         @test length(y2) == 2
         @test all(y2 .>= 0)
         @test all(y2 .<= 1.0)
+
+        pure_profile = Dict(player2 => y2)
+        best_x1 = IPG.best_response(player1, pure_profile)
+        @test length(best_x1) == 2
+        @test best_x1 == [1.0, 1.0]  # the best response is always x = (1,1)
     end
 
     @testset "Player serialization" begin
