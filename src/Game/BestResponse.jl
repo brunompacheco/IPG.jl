@@ -1,12 +1,4 @@
 
-"Compute `player`'s best response to the pure strategy profile `x_others`."
-function best_response(player::Player, x_others::Profile{<:Vector{<:Real}})
-    dummy_mixed_profile = Profile{DiscreteMixedStrategy}(
-        p => DiscreteMixedStrategy(xp) for (p, xp) in x_others
-    )
-    return best_response(player, dummy_mixed_profile)
-end
-
 "Compute `player`'s best response to the mixed strategy profile `σ_others`."
 function best_response(player::Player, σ_others::Profile{DiscreteMixedStrategy})
     vars_player = all_variables(player.X)
@@ -22,6 +14,8 @@ function best_response(player::Player, σ_others::Profile{DiscreteMixedStrategy}
 
     return value.(vars_player)
 end
+"Compute `player`'s best response to the pure strategy profile `x_others`."
+best_response(player::Player, x_others::Profile{PureStrategy}) = best_response(player, convert(Profile{DiscreteMixedStrategy}, x_others))
 # function best_response(player::Player{<:AbstractBilateralPayoff}, σ::Vector{DiscreteMixedStrategy})
     # error("best_response for player with bilateral payoff not implemented yet") # TODO
 

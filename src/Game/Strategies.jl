@@ -1,12 +1,14 @@
 using IterTools
 
+# TODO: generalize to any numeric type `const PureStrategy{T} = Vector{T} where T <: Real`
+const PureStrategy = Vector{Float64}
 
 struct DiscreteMixedStrategy
     "Probability vector."
     probs::Vector{Float64}
     "Support (vector of strategies)."
-    supp::Vector{Vector{Float64}}
-    function DiscreteMixedStrategy(probs::Vector{<:Real}, supp::Vector{<:Vector{<:Real}})
+    supp::Vector{PureStrategy}
+    function DiscreteMixedStrategy(probs::Vector{Float64}, supp::Vector{PureStrategy})
         if length(probs) != size(supp, 1)
             error("There must be as many probabilities as strategies in the support.")
         end
@@ -21,17 +23,9 @@ struct DiscreteMixedStrategy
         return new(probs[probs .> 0], supp[probs .> 0])
     end
 end
-"Build mixed strategy from pure strategy."
-function DiscreteMixedStrategy(xp::Vector{<:Real})
-    return DiscreteMixedStrategy([1.0], [xp])
-end
+Base.convert(::Type{DiscreteMixedStrategy}, xp::PureStrategy) = DiscreteMixedStrategy([1.0], [xp])
 Base.:(==)(σp1::DiscreteMixedStrategy, σp2::DiscreteMixedStrategy) = σp1.probs == σp2.probs && σp1.supp == σp2.supp
 Base.:(≈)(σp1::DiscreteMixedStrategy, σp2::DiscreteMixedStrategy) = σp1.probs ≈ σp2.probs && σp1.supp ≈ σp2.supp
-
-"Check whether the mixed strategy is actually pure."
-function is_pure(σp::DiscreteMixedStrategy)
-    return length(σp.probs) == 1
-end
 
 "Compute the expected value of a function given a discrete mixed strategy."
 function expected_value(f::Function, σp::DiscreteMixedStrategy)
@@ -42,9 +36,14 @@ function expected_value(f::Function, σp::DiscreteMixedStrategy)
 
     return expectation
 end
+export expected_value
+
+const Strategy = Union{PureStrategy, DiscreteMixedStrategy}
+export PureStrategy, DiscreteMixedStrategy, Strategy
 
 # Utils
 
 function others(x::Vector{<:Any}, p::Integer)
     return [x[1:p-1] ; x[p+1:end]]
 end
+export others

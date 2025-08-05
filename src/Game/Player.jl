@@ -19,9 +19,10 @@ end
 function set_optimizer(player::Player, optimizer_factory)
     JuMP.set_optimizer(player.X, optimizer_factory)
 end
+export set_optimizer
 
 "Solve the feasibility problem for a player, returning a feasible strategy."
-function find_feasible_pure_strategy(player::Player)
+function find_feasible_pure_strategy(player::Player)::PureStrategy
     @objective(player.X, JuMP.MOI.FEASIBILITY_SENSE, 0)
 
     set_silent(player.X)
@@ -31,8 +32,8 @@ function find_feasible_pure_strategy(player::Player)
 end
 
 "Solve the feasibility problem of all players, returning a feasible profile."
-function find_feasible_pure_profile(players::Vector{<:Player})
-    return [find_feasible_pure_strategy(player) for player in players]
+function find_feasible_pure_profile(players::Vector{Player})::Profile{PureStrategy}
+    return Profile{PureStrategy}(player => find_feasible_pure_strategy(player) for player in players)
 end
 
 # TODO: serialization is discontinued (for now)

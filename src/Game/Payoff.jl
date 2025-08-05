@@ -3,7 +3,7 @@
 Get the payoff map for `player` given the pure strategy profile `x_others`.
 The payoff map is a function that takes the player's strategy and returns the payoff.
 """
-function get_payoff_map(player::Player, x_others::Profile{<:Vector{<:Real}})
+function get_payoff_map(player::Player, x_others::Profile{PureStrategy})
     variable_assignments = Dict{VariableRef, Any}()
     for (other, x_other) in x_others
         for (v, val) in zip(all_variables(other.X), x_other)
@@ -24,7 +24,7 @@ function get_payoff_map(player::Player, x_others::Profile{<:Vector{<:Real}})
 end
 
 "Evaluate the player's payoff when she plays `x_player` and the others play `x_others`."
-function payoff(player::Player, x_player::Vector{<:Any}, x_others::Profile{<:Vector{<:Real}})
+function payoff(player::Player, x_player::Vector{<:Any}, x_others::Profile{PureStrategy})
     return get_payoff_map(player, x_others)(x_player)
 end
 
@@ -34,7 +34,7 @@ function payoff(player::Player, x_player::Vector{<:Any}, σ_others::Profile{Disc
 end
 
 "Expected payoff of a mixed strategy (`σ_player`) against a pure profile (`x_others`)."
-function payoff(player::Player, σ_player::DiscreteMixedStrategy, x_others::Profile{<:Vector{<:Real}})
+function payoff(player::Player, σ_player::DiscreteMixedStrategy, x_others::Profile{PureStrategy})
     return expected_value(x_player -> payoff(player, x_player, x_others), σ_player)
 end
 

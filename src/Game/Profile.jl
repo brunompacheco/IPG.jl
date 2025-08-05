@@ -1,6 +1,6 @@
 
 "Strategy profile. We expect `T` to be a DiscreteMixedStrategy or a pure strategy (Vector{<:Real})."
-const Profile{T} = Dict{Player, T}
+const Profile{T} = Dict{Player, T} where T <: Strategy
 
 "Compute the expected value of a function given a discrete mixed profile."
 function expected_value(f::Function, σ::Profile{DiscreteMixedStrategy})
@@ -14,4 +14,8 @@ function expected_value(f::Function, σ::Profile{DiscreteMixedStrategy})
     end
 
     return expectation
+end
+
+function others(profile::Profile{T}, player::Player) where T <: Strategy
+    return Profile{T}(p => profile[p] for p in keys(profile) if p != player)
 end
