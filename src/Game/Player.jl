@@ -8,6 +8,7 @@ struct Player
     "Payoff expression."
     Π::AbstractJuMPScalar
 end
+export Player
 
 "Check whether an optimizer has already been set for player."
 function has_optimizer(player::Player)
