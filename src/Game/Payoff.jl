@@ -1,23 +1,28 @@
 
 """
+Create a dictionary of variable assignments (JuMP-style) from a pure strategy.
+"""
+function build_var_assignments(player::Player, x::Vector{<:Any})
+    variable_assignments = Dict{VariableRef, Any}()
+    for (v, val) in zip(all_variables(player.X), x)
+        variable_assignments[v] = val
+    end
+    return variable_assignments
+end
+
+"""
 Get the payoff map for `player` given the pure strategy profile `x_others`.
 The payoff map is a function that takes the player's strategy and returns the payoff.
 """
 function get_payoff_map(player::Player, x_others::Profile{PureStrategy})
-    variable_assignments = Dict{VariableRef, Any}()
-    for (other, x_other) in x_others
-        for (v, val) in zip(all_variables(other.X), x_other)
-            variable_assignments[v] = val
-        end
-    end
+    others_var_assignments = [build_var_assignments(other, x_other)
+                              for (other, x_other) in x_others]
+    var_assignments = merge(others_var_assignments...)
 
     function payoff_map(x_player::Vector{<:Any})
-        # Assign the player's strategy to the variables
-        for (v, val) in zip(all_variables(player.X), x_player)
-            variable_assignments[v] = val
-        end
+        complete_var_assignments = merge(var_assignments, build_var_assignments(player, x_player))
 
-        return value(v -> get(variable_assignments, v, 0), player.Π)
+        return value(v -> complete_var_assignments[v], player.Π)
     end
 
     return payoff_map
