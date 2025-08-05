@@ -1,45 +1,43 @@
 using JuMP, JSON3
 
-abstract type AbstractPlayer end
-
 "A player in an IPG."
-struct Player{P<:AbstractJuMPScalar} <: AbstractPlayer
+struct Player
     "Strategy space."
-    Xp::Model
+    X::Model
     # TODO: the idea is that instead of a predefined payoff type, we can manipulate JuMP expressions. Using `value(var_value::Function, ex::NonlinearExpression)` we can both evaluate the payoff at strategies AND build objectives for best responses.
     "Payoff expression."
-    Πp::P
+    Π::AbstractJuMPScalar
 end
 
 "Check whether an optimizer has already been set for player."
-function has_optimizer(player::AbstractPlayer)
-    return ~(backend(player.Xp).state == JuMP.MOIU.NO_OPTIMIZER)
+function has_optimizer(player::Player)
+    return ~(backend(player.X).state == JuMP.MOIU.NO_OPTIMIZER)
 end
 
 "Define the optimizer for player."
-function set_optimizer(player::AbstractPlayer, optimizer_factory)
-    JuMP.set_optimizer(player.Xp, optimizer_factory)
+function set_optimizer(player::Player, optimizer_factory)
+    JuMP.set_optimizer(player.X, optimizer_factory)
 end
 
 "Solve the feasibility problem for a player, returning a feasible strategy."
-function find_feasible_pure_strategy(player::AbstractPlayer)
-    @objective(player.Xp, JuMP.MOI.FEASIBILITY_SENSE, 0)
+function find_feasible_pure_strategy(player::Player)
+    @objective(player.X, JuMP.MOI.FEASIBILITY_SENSE, 0)
 
-    set_silent(player.Xp)
-    optimize!(player.Xp)
+    set_silent(player.X)
+    optimize!(player.X)
 
-    return value.(all_variables(player.Xp))
+    return value.(all_variables(player.X))
 end
 
 "Solve the feasibility problem of all players, returning a feasible profile."
-function find_feasible_pure_profile(players::Vector{<:AbstractPlayer})
+function find_feasible_pure_profile(players::Vector{<:Player})
     return [find_feasible_pure_strategy(player) for player in players]
 end
 
 # TODO: serialization is discontinued (for now)
 # function save(player::Player{<:AbstractJuMPScalar}, filename::String)
 #     # we need to ensure that the file is stored as a json, so we can add the payoff information
-#     JuMP.write_to_file(player.Xp, filename; format = JuMP.MOI.FileFormats.FORMAT_MOF)
+#     JuMP.write_to_file(player.X, filename; format = JuMP.MOI.FileFormats.FORMAT_MOF)
 
 #     # TODO: this could be refactored as a payoff JSON-serialization method
 #     # see https://quinnj.github.io/JSON3.jl/stable/#Struct-API
@@ -48,11 +46,11 @@ end
 
 #     mof_json[:IPG__player_index] = player.p
 #     mof_json[:IPG__payoff] = Dict(
-#         :cp => player.Πp.cp,
-#         :Qp => player.Πp.Qp,
+#         :cp => player.Π.cp,
+#         :Qp => player.Π.Qp,
 #         # JSON3 cannot store matrices, it stores them as a flat vector
-#         :Qp_shapes => [size(Qpk) for Qpk in player.Πp.Qp],
-#         :p => player.Πp.p,
+#         :Qp_shapes => [size(Qpk) for Qpk in player.Π.Qp],
+#         :p => player.Π.p,
 #     )
 
 #     open(filename, "w") do file
