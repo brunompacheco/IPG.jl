@@ -1,8 +1,11 @@
 
-function initialize_strategies_feasibility(players::Vector{<:AbstractPlayer})
-    S_X = [Vector{Vector{Float64}}() for _ in players]
+empty_S_X(players::Vector{Player}) = Dict{Player, Vector{PureStrategy}}(p => Vector{PureStrategy}() for p in players)
+
+"Solves a feasibility problem for each player individually."
+function initialize_strategies_feasibility(players::Vector{Player})
+    S_X = empty_S_X(players)
     for player in players
-        xp_init = start_value.(all_variables(player.Xp))
+        xp_init = start_value.(all_variables(player.X))
 
         if nothing in xp_init
             # TODO: if `initial_sol` is just a partial solution, I could fix its values
@@ -10,26 +13,27 @@ function initialize_strategies_feasibility(players::Vector{<:AbstractPlayer})
             xp_init = find_feasible_pure_strategy(player)
         end
 
-        push!(S_X[player.p], xp_init)
+        push!(S_X[player], xp_init)
     end
 
     return S_X
 end
 
-function initialize_strategies_player_alone(players::Vector{<:AbstractPlayer})
-    S_X = [Vector{Vector{Float64}}() for _ in players]
+"Computes the best response of each player when others play 0."
+function initialize_strategies_player_alone(players::Vector{Player})
+    S_X = empty_S_X(players)
 
-    # mixed profile that simulates players being alone (all others play 0)
-    σ_dummy = [DiscreteMixedStrategy([1], [zeros(length(all_variables(player.Xp)))]) for player in players]
+    # profile that simulates players being alone (all others play 0)
+    x_others_dummy = Profile{PureStrategy}(player => zeros(length(all_variables(player.X))) for player in players)
 
     for player in players
-        xp_init = start_value.(all_variables(player.Xp))
+        xp_init = start_value.(all_variables(player.X))
 
         if nothing in xp_init
-            xp_init = best_response(player, σ_dummy)
+            xp_init = best_response(player, x_others_dummy)
         end
 
-        push!(S_X[player.p], xp_init)
+        push!(S_X[player], xp_init)
     end
 
     return S_X

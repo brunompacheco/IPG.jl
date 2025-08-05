@@ -48,6 +48,26 @@ function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound:
     return players
 end
 
+function get_example_two_player_game()
+    # Example 5.3 from the IPG paper
+    X1 = Model()
+    @variable(X1, x1, start=10.0)
+    @constraint(X1, x1 >= 0)
+
+    X2 = Model()
+    @variable(X2, x2, start=10.0)
+    @constraint(X2, x2 >= 0)
+
+    function player_payoff(x_self, x_other)
+        return -x_self * x_self + x_self * x_other
+    end
+
+    return [
+        Player(X1, player_payoff(x1, x2)),
+        Player(X2, player_payoff(x2, x1))
+    ]
+end
+
 @testset "IPG.jl" begin
     @testset "Two-player game" begin
         IPG.initialize_strategies = IPG.initialize_strategies_player_alone
@@ -155,6 +175,45 @@ end
         best_x1 = IPG.best_response(player1, pure_profile)
         @test length(best_x1) == 2
         @test best_x1 == [1.0, 1.0]  # the best response is always x = (1,1)
+    end
+
+    @testset "Initialization" begin
+        players = get_example_two_player_game()
+        for player in players
+            IPG.set_optimizer(player, SCIP.Optimizer)
+        end
+
+        # remove start values from player 1
+        for var in all_variables(players[1].X)
+            set_start_value(var, nothing)
+        end
+
+        S_X = IPG.initialize_strategies_feasibility(players)
+
+        @test Set(keys(S_X)) == Set(players)
+        for player in players
+            @test length(S_X[player]) == 1  # only one strategy should be initialized
+        end
+        @test S_X[players[2]] == [[10.0]]  # player 2 has a start value
+        # check that player 1’s initialized strategy lies in its feasible region
+        x1 = S_X[players[1]][1]
+        @test length(x1) == length(all_variables(players[1].X))
+        @test all(x1 .>= 0)  # only constraint of player 1
+
+        # remove start_values from player 2 as well
+        for var in all_variables(players[2].X)
+            set_start_value(var, nothing)
+        end
+
+        S_X = IPG.initialize_strategies_player_alone(players)
+
+        @test Set(keys(S_X)) == Set(players)
+        for player in players
+            @test length(S_X[player]) == 1  # only one strategy should be initialized
+            xp = S_X[player][1]
+            @test length(xp) == length(all_variables(player.X))
+            @test all(xp .== 0)  # known best response to 0
+        end
     end
 
     @testset "Player serialization" begin
