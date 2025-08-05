@@ -43,4 +43,6 @@ function payoff(player::Player, σ_player::DiscreteMixedStrategy, σ_others::Pro
     return expected_value(x_player -> payoff(player, x_player, σ_others), σ_player)
 end
 
+payoff(player::Player, σ::Profile{T}) where T <: Strategy = payoff(player, σ[player], others(σ, player))
+
 export payoff
