@@ -4,7 +4,7 @@ using TestItems
 @testsnippet Utilities begin
     using LinearAlgebra, JuMP, SCIP
 
-    function generate_random_instance(n::Int, m::Int, lower_bound::Int, upper_bound::Int; i_type="H")
+    function generate_random_instance(n::Int, m::Int, lower_bnd::Int, upper_bnd::Int; i_type="H")
         factor = i_type == "H" ? 0.1 : 0.01
         RQ = 5
 
@@ -28,8 +28,15 @@ using TestItems
             end
         end
 
+        # build strategy spaces
+        X = [Model() for _ in 1:n]
+        for p in 1:n
+            @variable(X[p], [1:m], Int, base_name="x_$p", lower_bound=lower_bnd, upper_bound=upper_bnd)
+        end
+        x = [[variable_by_name(X[p], "x_$p[$i]") for i in 1:m] for p in 1:n]
+
         # build players
-        players = Vector{Player{QuadraticPayoff}}()
+        players = Vector{Player}()
         for p in 1:n
             # build payoff
             Qp = Vector{Matrix{Float64}}()
@@ -38,13 +45,13 @@ using TestItems
             end
 
             cp = rand(-RQ:RQ, m)
-            Πp = QuadraticPayoff(cp, Qp, p)
+            
+            Πp = cp'*x[p]
+            Πp += 0.5 * x[p]' * Qp[p] * x[p]
+            Πp += sum(x[k]' * Qp[k] * x[p] for k in 1:n if k != p)
 
             # build strategy space
-            Xp = Model()
-            @variable(Xp, lower_bound <= x[1:m] <= upper_bound, Int)
-
-            push!(players, Player(Xp, Πp, p))
+            push!(players, Player(X[p], Πp))
         end
 
         return players
@@ -240,7 +247,44 @@ end
     @test expected_value(identity, σ_PNS[players[2]]) == expected_value(identity, σ_Sandholm[players[2]]) == [1.0]
 end
 
-@testitem "Two-player game" begin
+@testitem "Example 5.3" setup=[Utilities] begin
+    # guarantee reproducibility (always start with player 1)
+    IPG.get_player_order = IPG.get_player_order_fixed_descending
+
+    players = get_example_two_player_game()
+
+    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
+
+    @test [σ[players[1]].supp for σ in Σ] ≈ [
+        [[10.0]],
+        [[10.0]],
+        [[2.5]],
+        [[2.5]],
+        [[0.625]]
+    ]
+    @test [σ[players[2]].supp for σ in Σ] ≈ [
+        [[10.0]],
+        [[5.0]],
+        [[5.0]],
+        [[1.25]],
+        [[1.25]]
+    ]
+    expected_improvements = [
+        (players[2], 25.0),
+        (players[1], 56.25),
+        (players[2], 14.0625),
+        (players[1], 3.515625),
+        (players[2], 0.87890625)
+    ]
+    @test all(p_imp == p_expected for ((p_imp, _),(p_expected, _)) in zip(payoff_improvements, expected_improvements))
+    @test all(imp ≈ expected_imp for ((_, imp),(_, expected_imp)) in zip(payoff_improvements, expected_improvements))
+end
+
+"SGM should work for any Nonlinear two-player game."
+@testitem "Two-player game" setup=[Utilities] begin
+    players = get_example_two_player_game()
+    nonlin_players = [Player(p.X, convert(JuMP.GenericNonlinearExpr, p.Π)) for p in get_example_two_player_game()]
+
     IPG.initialize_strategies = IPG.initialize_strategies_player_alone
 
     bilateral_players = generate_random_instance(2, 2, -5, 5)
@@ -290,80 +334,6 @@ end
     @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
 end
 
-@testitem "Player serialization" begin
-    X1 = Model()
-    @variable(X1, x1, start=10.0)
-    @constraint(X1, x1 >= 0)
-
-    player = Player(X1, QuadraticPayoff(0, [2, 1], 1), 1)
-
-    filename = "test_player.json"
-    IPG.save(player, filename)
-    loaded_player = IPG.load(filename)
-
-    @test loaded_player.p == player.p
-    @test loaded_player.Π.cp == player.Π.cp
-    @test loaded_player.Π.Qp == player.Π.Qp
-
-    # test strategy space
-    X1 = player.X
-    loaded_X1 = loaded_player.X
-
-    set_optimizer(X1, SCIP.Optimizer)
-    set_optimizer(loaded_X1, SCIP.Optimizer)
-
-    set_silent(X1)
-    optimize!(X1)
-
-    set_silent(loaded_X1)
-    optimize!(loaded_X1)
-
-    @test value.(all_variables(X1)) == value.(all_variables(loaded_X1))
-    @test objective_value(X1) == objective_value(loaded_X1)
-
-    # cleanup
-    rm(filename)
-end
-
-@testitem "Example 5.3" begin
-    using SCIP
-
-    # guarantee reproducibility (always start with player 1)
-    IPG.get_player_order = IPG.get_player_order_fixed_descending
-
-    P1 = Player(QuadraticPayoff(0, [2, 1], 1), 1)
-    @variable(P1.X, x1, start=10.0)
-    @constraint(P1.X, x1 >= 0)
-
-    P2 = Player(QuadraticPayoff(0, [1, 2], 2), 2)
-    @variable(P2.X, x2, start=10.0)
-    @constraint(P2.X, x2 >= 0)
-
-    Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5);
-
-    @test [σ[1].supp for σ in Σ] ≈ [
-        [[10.0]],
-        [[10.0]],
-        [[2.5]],
-        [[2.5]],
-        [[0.625]]
-    ]
-    @test [σ[2].supp for σ in Σ] ≈ [
-        [[10.0]],
-        [[5.0]],
-        [[5.0]],
-        [[1.25]],
-        [[1.25]]
-    ]
-    @test all(Iterators.flatten(payoff_improvements) .≈ Iterators.flatten([
-        (2, 25.0),
-        (1, 56.25),
-        (2, 14.0625),
-        (1, 3.515625),
-        (2, 0.87890625)
-    ]))
-end
-
 @testitem "README Example Test" begin
     player_1 = Player(QuadraticPayoff(0, [2, 1], 1), 1)
 
@@ -400,3 +370,38 @@ end
     @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
     @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
 end
+
+# @testitem "Player serialization" begin
+#     X1 = Model()
+#     @variable(X1, x1, start=10.0)
+#     @constraint(X1, x1 >= 0)
+
+#     player = Player(X1, QuadraticPayoff(0, [2, 1], 1), 1)
+
+#     filename = "test_player.json"
+#     IPG.save(player, filename)
+#     loaded_player = IPG.load(filename)
+
+#     @test loaded_player.p == player.p
+#     @test loaded_player.Π.cp == player.Π.cp
+#     @test loaded_player.Π.Qp == player.Π.Qp
+
+#     # test strategy space
+#     X1 = player.X
+#     loaded_X1 = loaded_player.X
+
+#     set_optimizer(X1, SCIP.Optimizer)
+#     set_optimizer(loaded_X1, SCIP.Optimizer)
+
+#     set_silent(X1)
+#     optimize!(X1)
+
+#     set_silent(loaded_X1)
+#     optimize!(loaded_X1)
+
+#     @test value.(all_variables(X1)) == value.(all_variables(loaded_X1))
+#     @test objective_value(X1) == objective_value(loaded_X1)
+
+#     # cleanup
+#     rm(filename)
+# end

@@ -1,5 +1,5 @@
 
-const PayoffImprovements = Vector{Tuple{Int64, Float64}}
+const PayoffImprovements = Vector{Tuple{Player, Float64}}
 const CandidateEquilibria = Vector{Profile{DiscreteMixedStrategy}}
 
 function get_player_order_fixed(
@@ -44,7 +44,7 @@ function get_player_order_by_last_deviation(
     Σ_S::CandidateEquilibria,
     payoff_improvements::PayoffImprovements
 )
-    iterations_since_last_deviation = Dict(p => length(payoff_improvements) for p in 1:length(players))
+    iterations_since_last_deviation = Dict(p => length(payoff_improvements) for p in players)
 
     for i in 0:length(payoff_improvements)-1
         p, _ = payoff_improvements[end-i]
@@ -57,7 +57,7 @@ function get_player_order_by_last_deviation(
     # sort by the number of iterations since the last deviation (decreasing)
     iterations_since_last_deviation = sort(collect(iterations_since_last_deviation), by = x -> -x[2])
 
-    return [p for (p, _) in iterations_since_last_deviation]
+    return [i for (i, _) in enumerate(iterations_since_last_deviation)]
 end
 
 # TODO: instead of having a player order, just reorder the list of players
