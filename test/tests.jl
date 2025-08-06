@@ -204,6 +204,38 @@ end
     @test isnothing(new_x_p)
 end
 
+@testitem "Nonlinear deviation reaction" setup=[Utilities] begin
+    players = [Player(p.X, convert(JuMP.GenericNonlinearExpr, p.Π)) for p in get_example_two_player_game()]
+    for player in players
+        IPG.set_optimizer(player, SCIP.Optimizer)
+    end
+
+    S_X = IPG.initialize_strategies(players)
+    σ = Profile{DiscreteMixedStrategy}(player => S_X[player][1] for player in players)
+
+    for player in players
+        @test σ[player].supp == [[10.0]]  # has to be the start value
+    end
+
+    # TODO: there is a bug in JuMP when evaluating nonlinear expressions with variable
+    # references. see https://github.com/jump-dev/JuMP.jl/issues/4044. until the issue is
+    # fixed, this will likely not work.
+    payoff_improvement, player, new_x_p = IPG.find_deviation(players, σ)
+
+    previous_payoff = payoff(player, σ[player], others(σ, player))
+    new_payoff = payoff(player, new_x_p, others(σ, player))
+
+    @test payoff_improvement == new_payoff - previous_payoff
+    @test payoff_improvement > 0.0  # there should be a deviation
+
+    # there should be no deviation from an equilibrium
+    σ_NE = Profile{DiscreteMixedStrategy}(player => [0.0] for player in players)
+    payoff_improvement, player, new_x_p = IPG.find_deviation(players, σ_NE)
+    @test payoff_improvement == 0.0
+    @test isnothing(player)
+    @test isnothing(new_x_p)
+end
+
 @testitem "Polymatrix computation" setup=[Utilities] begin
     players = get_example_two_player_game()
     for player in players
@@ -281,57 +313,53 @@ end
 end
 
 "SGM should work for any Nonlinear two-player game."
-@testitem "Two-player game" setup=[Utilities] begin
-    players = get_example_two_player_game()
-    nonlin_players = [Player(p.X, convert(JuMP.GenericNonlinearExpr, p.Π)) for p in get_example_two_player_game()]
+@testitem "Nonlinear example 5.3" setup=[Utilities] begin
+    # guarantee reproducibility (always start with player 1)
+    IPG.get_player_order = IPG.get_player_order_fixed_descending
 
-    IPG.initialize_strategies = IPG.initialize_strategies_player_alone
+    # Example 5.3 from the IPG paper
+    X1 = Model()
+    @variable(X1, x1, start=10.0)
+    @constraint(X1, x1 >= 0)
 
-    bilateral_players = generate_random_instance(2, 2, -5, 5)
-    for player in bilateral_players
-        for variable in all_variables(player.X)
-            set_start_value(variable, 1.0)
-        end
+    X2 = Model()
+    @variable(X2, x2, start=10.0)
+    @constraint(X2, x2 >= 0)
+
+    function player_payoff(x_self, x_other)
+        return -x_self * x_self + x_self * x_other
     end
 
-    # "black-box" function for blackbox payoff players
-    function get_blackbox_function(p)
-        return (xp, x_others) -> payoff(bilateral_players[p].Π, xp, x_others)
-    end
-
-    blackbox_players = [
-        Player(copy(player.X), BlackBoxPayoff(get_blackbox_function(player.p)), player.p)
-        for player in bilateral_players
+    players = [
+        Player(X1, convert(JuMP.GenericNonlinearExpr, player_payoff(x1, x2))),
+        Player(X2, convert(JuMP.GenericNonlinearExpr, player_payoff(x2, x1)))
     ]
 
-    Σ_bilateral, poff_imp_bilateral = IPG.SGM(bilateral_players, SCIP.Optimizer, max_iter=10)
-    Σ_blackbox, poff_imp_blackbox = IPG.SGM(blackbox_players, SCIP.Optimizer, max_iter=10)
+    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
 
-    @test all([all(σ_bilateral .≈ σ_blackbox) for (σ_bilateral, σ_blackbox) in zip(Σ_bilateral, Σ_blackbox)])
-    @test all([all(p_bilateral .≈ p_blackbox) for (p_bilateral, p_blackbox) in zip(poff_imp_bilateral, poff_imp_blackbox)])
-
-    # not sure if necessary, but let's guarantee reproducibility
-    IPG.initialize_strategies = IPG.initialize_strategies_feasibility
-end
-
-@testitem "Bilateral Payoff" begin
-    quad_payoff = (xp, x_others) -> -xp[1]*xp[1] + xp[1] * x_others[1][1]
-    Π_blackbox = BlackBoxPayoff(quad_payoff)
-    Π_bilateral = QuadraticPayoff(0, [2, 1], 1)  # equivalent for the first player
-
-    x = [[10.0], [10.0]]
-    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))  # == 0.0
-    x = [[0.0], [0.0]]
-    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
-    x = [[10.0], [5.0]]
-    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
-    σ = DiscreteMixedStrategy.(x)
-    @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
-    σ = [
-        DiscreteMixedStrategy([0.5, 0.5], [[1], [0]]),
-        DiscreteMixedStrategy([0.25, 0.75], [[5], [10]]),
+    @test [σ[players[1]].supp for σ in Σ] ≈ [
+        [[10.0]],
+        [[10.0]],
+        [[2.5]],
+        [[2.5]],
+        [[0.625]]
     ]
-    @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
+    @test [σ[players[2]].supp for σ in Σ] ≈ [
+        [[10.0]],
+        [[5.0]],
+        [[5.0]],
+        [[1.25]],
+        [[1.25]]
+    ]
+    expected_improvements = [
+        (players[2], 25.0),
+        (players[1], 56.25),
+        (players[2], 14.0625),
+        (players[1], 3.515625),
+        (players[2], 0.87890625)
+    ]
+    @test all(p_imp == p_expected for ((p_imp, _),(p_expected, _)) in zip(payoff_improvements, expected_improvements))
+    @test all(imp ≈ expected_imp for ((_, imp),(_, expected_imp)) in zip(payoff_improvements, expected_improvements))
 end
 
 @testitem "README Example Test" begin
