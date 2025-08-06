@@ -14,7 +14,7 @@ function find_deviation_best_response(players::Vector{Player}, σ::Profile{Discr
         end
     end
 
-    return 0.0, -1, nothing
+    return 0.0, nothing, nothing
 end
 
 find_deviation = find_deviation_best_response  # default value

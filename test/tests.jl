@@ -188,6 +188,13 @@ end
 
     @test payoff_improvement == new_payoff - previous_payoff
     @test payoff_improvement > 0.0  # there should be a deviation
+
+    # there should be no deviation from an equilibrium
+    σ_NE = Profile{DiscreteMixedStrategy}(player => [0.0] for player in players)
+    payoff_improvement, player, new_x_p = IPG.find_deviation(players, σ_NE)
+    @test payoff_improvement == 0.0
+    @test isnothing(player)
+    @test isnothing(new_x_p)
 end
 
 @testitem "Polymatrix computation" setup=[Utilities] begin
