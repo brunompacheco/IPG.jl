@@ -12,33 +12,31 @@ Implementation of the sampled generation method (SGM) for equilibria computation
 
 A game is any list of players. To define a player, you must define the strategy space and the payoff function. The strategy space is handled through JuMP models, while payoff functions are handled by our structures (see Bilateral payoff games below for examples). Additionally, we need to keep track of references for the decision variables and the index of each player in the game.
 
-The following illustratest the necessary steps to define a player:
+The following illustrates the necessary steps to define the players:
 ```julia
 using IPG
-Xp = Model()
 
-@variable(Xp, y[1:5], Int)
-@variable(Xp, z >= 0)
+p1 = Player(); ... ; pn = Player()
 
-@constraint(Xp, ...)  # add your constraints
+# variable examples
+@variable(p1.X, x1[1:5], Int)
+@variable(p1.X, y1 >= 0)
 
-Πp = QuadraticPayoff(...)  # payoff definition
+@constraint(p1.X, ...)  # add your constraints
 
-player = Player(Xp, [z], Πp, 1)  # add first player
+# do so for players 2..n
+
+# set payoff function
+set_payoff!(p1, c' * x1 + 0.5 * x1' * x2)
 ```
-Note that not all variables have to be provided to the Player definition, only those necessary to compute the payoff. <!-- TODO: See payoff section -->
 
 ## Payoff Functions
 
-Properly defining the payoff functions are key for the workings of this implementation. Currently, two types of payoff functions are implemented: quadratic and blackbox, which are illustrated in the examples bellow. The former follows the notation of the original paper and allows for any game definition (in terms of constraints) that your solver of choice supports. The latter only works for two-player games. See `src/Game/Payoff` for more details.
+The payoff is defined as a JuMP expression. Thus far, any quadratic jump expression is supported. In the (near) future, we expect to support nonlinear expressions as well, which could be handled by the SGM for two-player games.
 
-## Examples
+## Example
 
-### Bilateral payoff games
-
-The algorithm is particularly designed for games in which the player have bilaterally-separable payoff functions. This is due to the standard solution method for solving sampled games, which relies on normal form games formulated through the polymatrix. An example of such is the [`QuadraticPayoff`](src/Game/Payoff/BilateralPayoff.jl#L27) structure, which implements the payoff function structure used in the original paper's experiments.
-
-This example is based on Example 5.3, from Carvalho, Lodi, and Pedroso (2020).
+The following is based on Example 5.3, from Carvalho, Lodi, and Pedroso (2020).
 ```julia
 julia> using IPG, SCIP
 
