@@ -16,25 +16,25 @@ The algorithm is particularly designed for games in which the player have bilate
 
 This example is based on Example 5.3, from Carvalho, Lodi, and Pedroso (2020).
 ```julia
-julia> using IPG
+julia> using IPG, SCIP
 
-julia> player_1 = Player(QuadraticPayoff(0, [2, 1], 1), 1);
+julia> P1 = Player(); P2 = Player();
 
-julia> @variable(player_1.Xp, x1, start=10)
+julia> @variable(P1.X, x1, start=10)
 x1
 
-julia> @constraint(player_1.Xp, x1 >= 0)
+julia> @constraint(P1.X, x1 >= 0)
 x1 ≥ 0
 
-julia> player_2 = Player(QuadraticPayoff(0, [1, 2], 2), 2);
-
-julia> @variable(player_2.Xp, x2, start=10)
+julia> @variable(P2.X, x2 >= 0, start=10)
 x2
 
-julia> @constraint(player_2.Xp, x2 >= 0)
-x2 ≥ 0
+julia> set_payoff!(P1, -x1*x1 + x1*x2)
+-x1² + x1*x2
 
-julia> Σ, payoff_improvements = IPG.SGM([player_1, player_2], SCIP.Optimizer, max_iter=5);
+julia> set_payoff!(P2, -x2*x2 + x1*x2);
+
+julia> Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5);
 
 julia> Σ[end]
 2-element Vector{DiscreteMixedStrategy}:
@@ -44,7 +44,7 @@ julia> Σ[end]
 ```
 Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
 
-## Two-player games
+<!-- ## Two-player games
 
 A particular case of bilateral payoff functions that can be handled more generally are two-player games. In this case, because any payoff function is bilateral, we handle the more general [`BlackBoxPayoff`](src/Game/Payoff/Payoff.jl#29) through the SGM algorithm.
 
@@ -62,9 +62,9 @@ julia> players = [
            Player(BlackBoxPayoff(player_payoff), 2)
        ];
 
-julia> @variable(players[1].Xp, x1, start=10); @constraint(players[1].Xp, x1 >= 0);
+julia> @variable(players[1].X, x1, start=10); @constraint(players[1].X, x1 >= 0);
 
-julia> @variable(players[2].Xp, x2, start=10); @constraint(players[2].Xp, x2 >= 0);
+julia> @variable(players[2].X, x2, start=10); @constraint(players[2].X, x2 >= 0);
 
 julia> Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
 
@@ -73,7 +73,7 @@ julia> Σ[end]
  DiscreteMixedStrategy([1.0], [[0.625]])
  DiscreteMixedStrategy([1.0], [[1.25]])
 
-```
+``` -->
 
 ## Customization
 
@@ -91,7 +91,7 @@ To change to this alternative approach, you just need to add `IPG.initialize_str
 
 ### Sampled game solution
 
-By default, we solve the sampled games using NormalGames.jl, which has not been published (yet). Ask for permission and follow the installation instructions at https://github.com/mxmmargarida/Normal-form-games. Any nash equilibria method can be used. By default, we have wrapped NormalGames' implentation of Porter, Nudelman and Shoham's method in [`solve_PNS`](src/SGM/SampledGame/SearchNE.jl#L3). We also provide a wrapper for the Big-M formulation of Sandholm et al. (2005) in [`solve_Sandholm1`](src/SGM/SampledGame/SearchNE.jl#L19). To choose the latter instead of the former, just assign it to `IPG.solve`.
+By default, we solve the sampled games using NormalGames.jl, which has not been published (yet). Ask for permission and follow the installation instructions at https://github.com/mxmmargarida/Normal-form-games. Any nash equilibria method can be used. By default, we have wrapped NormalGames' implentation of Porter, Nudelman and Shoham's method in [`solve_PNS`](src/SGM/PolymatrixGame/Solve.jl#L24). We also provide a wrapper for the Big-M formulation of Sandholm et al. (2005) in [`solve_Sandholm1`](src/SGM/PolymatrixGame/Solve.jl#L43). To choose the latter instead of the former, just assign it to `IPG.solve`.
 
 ### Player order
 

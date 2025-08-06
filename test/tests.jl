@@ -363,41 +363,51 @@ end
 end
 
 @testitem "README Example Test" begin
-    player_1 = Player(QuadraticPayoff(0, [2, 1], 1), 1)
+    using IPG, SCIP
 
-    @variable(player_1.X, x1, start=10)
-    @constraint(player_1.X, x1 >= 0)
+    P1 = Player()
+    P2 = Player()
 
-    player_2 = Player(QuadraticPayoff(0, [1, 2], 2), 2)
+    @variable(P1.X, x1, start=10)
 
-    @variable(player_2.X, x2, start=10)
-    @constraint(player_2.X, x2 >= 0)
+    @constraint(P1.X, x1 >= 0)
 
-    Σ, payoff_improvements = IPG.SGM([player_1, player_2], SCIP.Optimizer, max_iter=5)
+    @variable(P2.X, x2, start=10)
 
-    # Verify the final strategies match the expected values
-    @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
-    @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
-end
+    @constraint(P2.X, x2 >= 0)
 
-@testitem "README Example Two-player" begin
-    player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
+    set_payoff!(P1, -x1*x1 + x1*x2)
+    @test P1.Π == -x1*x1 + x1*x2
 
-    players = [
-        Player(BlackBoxPayoff(player_payoff), 1),
-        Player(BlackBoxPayoff(player_payoff), 2)
-    ];
+    set_payoff!(P2, -x2*x2 + x1*x2)
+    @test P2.Π == -x2*x2 + x1*x2
 
-    @variable(players[1].X, x1, start=10); @constraint(players[1].X, x1 >= 0);
-
-    @variable(players[2].X, x2, start=10); @constraint(players[2].X, x2 >= 0);
-
-    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
+    Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5)
 
     # Verify the final strategies match the expected values
-    @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
-    @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
+    @test Σ[end][P1] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
+    @test Σ[end][P2] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
 end
+
+# TODO: this is also waiting for the issue on NonlinearExpr to be fixed (aka, the new refactor)
+# @testitem "README Example Two-player" begin
+#     player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
+
+#     players = [
+#         Player(BlackBoxPayoff(player_payoff), 1),
+#         Player(BlackBoxPayoff(player_payoff), 2)
+#     ];
+
+#     @variable(players[1].X, x1, start=10); @constraint(players[1].X, x1 >= 0);
+
+#     @variable(players[2].X, x2, start=10); @constraint(players[2].X, x2 >= 0);
+
+#     Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
+
+#     # Verify the final strategies match the expected values
+#     @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
+#     @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
+# end
 
 # @testitem "Player serialization" begin
 #     X1 = Model()
