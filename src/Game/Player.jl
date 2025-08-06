@@ -1,14 +1,25 @@
 using JuMP, JSON3
 
 "A player in an IPG."
-struct Player
+mutable struct Player
     "Strategy space."
     X::Model
-    # TODO: the idea is that instead of a predefined payoff type, we can manipulate JuMP expressions. Using `value(var_value::Function, ex::NonlinearExpression)` we can both evaluate the payoff at strategies AND build objectives for best responses.
+    # TODO: using value(...) to manipulate expressions does not work for NonlinearExpr, see https://github.com/jump-dev/JuMP.jl/issues/4044 for an appropriate solution (another huge refactor))
     "Payoff expression."
     Π::AbstractJuMPScalar
 end
+function Player()
+    return Player(Model(), AffExpr(0))
+end
 export Player
+
+function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
+    player.Π = payoff
+end
+function set_payoff!(player::Player, payoff::Real)
+    player.Π = AffExpr(payoff)
+end
+export set_payoff!
 
 "Check whether an optimizer has already been set for player."
 function has_optimizer(player::Player)
