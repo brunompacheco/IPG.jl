@@ -94,56 +94,6 @@ end
     @test σa ≈ σc
 end
 
-@testitem "Two-player game" begin
-    IPG.initialize_strategies = IPG.initialize_strategies_player_alone
-
-    bilateral_players = generate_random_instance(2, 2, -5, 5)
-    for player in bilateral_players
-        for variable in all_variables(player.X)
-            set_start_value(variable, 1.0)
-        end
-    end
-
-    # "black-box" function for blackbox payoff players
-    function get_blackbox_function(p)
-        return (xp, x_others) -> payoff(bilateral_players[p].Π, xp, x_others)
-    end
-
-    blackbox_players = [
-        Player(copy(player.X), BlackBoxPayoff(get_blackbox_function(player.p)), player.p)
-        for player in bilateral_players
-    ]
-
-    Σ_bilateral, poff_imp_bilateral = IPG.SGM(bilateral_players, SCIP.Optimizer, max_iter=10)
-    Σ_blackbox, poff_imp_blackbox = IPG.SGM(blackbox_players, SCIP.Optimizer, max_iter=10)
-
-    @test all([all(σ_bilateral .≈ σ_blackbox) for (σ_bilateral, σ_blackbox) in zip(Σ_bilateral, Σ_blackbox)])
-    @test all([all(p_bilateral .≈ p_blackbox) for (p_bilateral, p_blackbox) in zip(poff_imp_bilateral, poff_imp_blackbox)])
-
-    # not sure if necessary, but let's guarantee reproducibility
-    IPG.initialize_strategies = IPG.initialize_strategies_feasibility
-end
-
-@testitem "Bilateral Payoff" begin
-    quad_payoff = (xp, x_others) -> -xp[1]*xp[1] + xp[1] * x_others[1][1]
-    Π_blackbox = BlackBoxPayoff(quad_payoff)
-    Π_bilateral = QuadraticPayoff(0, [2, 1], 1)  # equivalent for the first player
-
-    x = [[10.0], [10.0]]
-    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))  # == 0.0
-    x = [[0.0], [0.0]]
-    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
-    x = [[10.0], [5.0]]
-    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
-    σ = DiscreteMixedStrategy.(x)
-    @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
-    σ = [
-        DiscreteMixedStrategy([0.5, 0.5], [[1], [0]]),
-        DiscreteMixedStrategy([0.25, 0.75], [[5], [10]]),
-    ]
-    @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
-end
-
 @testitem "Finding feasible strategies" setup=[Utilities] begin
     X = Model()
     @variable(X, x[1:2])
@@ -238,6 +188,85 @@ end
 
     @test payoff_improvement == new_payoff - previous_payoff
     @test payoff_improvement > 0.0  # there should be a deviation
+end
+
+@testitem "Polymatrix computation" setup=[Utilities] begin
+    players = get_example_two_player_game()
+    for player in players
+        IPG.set_optimizer(player, SCIP.Optimizer)
+    end
+
+    # give some options so that we can test the polymatrix
+    S_X = Dict(players[1] => [[10.0],[5.0]], players[2]=> [[10.0],[5.0]])
+
+    polymatrix = IPG.get_polymatrix_bilateral(players, S_X)
+
+    @test polymatrix[players[1], players[1]] == polymatrix[players[2], players[2]] == zeros(2, 2)
+    @test polymatrix[players[1], players[2]] == polymatrix[players[2], players[1]] == [
+        0.0 -50.0;
+        25.0 0.0
+    ]
+
+    two_player_polymatrix = IPG.get_polymatrix_twoplayers(players[1], players[2], S_X)
+
+    @test two_player_polymatrix == polymatrix
+
+    incremental_S_X = IPG.initialize_strategies(players)  # initialized from start values
+    sampled_game = IPG.PolymatrixSampledGame(players, incremental_S_X)
+    IPG.add_new_strategy!(sampled_game, players[1], [5.0])
+    IPG.add_new_strategy!(sampled_game, players[2], [5.0])
+
+    @test sampled_game.polymatrix == polymatrix
+end
+
+@testitem "Two-player game" begin
+    IPG.initialize_strategies = IPG.initialize_strategies_player_alone
+
+    bilateral_players = generate_random_instance(2, 2, -5, 5)
+    for player in bilateral_players
+        for variable in all_variables(player.X)
+            set_start_value(variable, 1.0)
+        end
+    end
+
+    # "black-box" function for blackbox payoff players
+    function get_blackbox_function(p)
+        return (xp, x_others) -> payoff(bilateral_players[p].Π, xp, x_others)
+    end
+
+    blackbox_players = [
+        Player(copy(player.X), BlackBoxPayoff(get_blackbox_function(player.p)), player.p)
+        for player in bilateral_players
+    ]
+
+    Σ_bilateral, poff_imp_bilateral = IPG.SGM(bilateral_players, SCIP.Optimizer, max_iter=10)
+    Σ_blackbox, poff_imp_blackbox = IPG.SGM(blackbox_players, SCIP.Optimizer, max_iter=10)
+
+    @test all([all(σ_bilateral .≈ σ_blackbox) for (σ_bilateral, σ_blackbox) in zip(Σ_bilateral, Σ_blackbox)])
+    @test all([all(p_bilateral .≈ p_blackbox) for (p_bilateral, p_blackbox) in zip(poff_imp_bilateral, poff_imp_blackbox)])
+
+    # not sure if necessary, but let's guarantee reproducibility
+    IPG.initialize_strategies = IPG.initialize_strategies_feasibility
+end
+
+@testitem "Bilateral Payoff" begin
+    quad_payoff = (xp, x_others) -> -xp[1]*xp[1] + xp[1] * x_others[1][1]
+    Π_blackbox = BlackBoxPayoff(quad_payoff)
+    Π_bilateral = QuadraticPayoff(0, [2, 1], 1)  # equivalent for the first player
+
+    x = [[10.0], [10.0]]
+    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))  # == 0.0
+    x = [[0.0], [0.0]]
+    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
+    x = [[10.0], [5.0]]
+    @test payoff(Π_blackbox, x[1], others(x, 1)) == payoff(Π_bilateral, x[1], others(x, 1))
+    σ = DiscreteMixedStrategy.(x)
+    @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
+    σ = [
+        DiscreteMixedStrategy([0.5, 0.5], [[1], [0]]),
+        DiscreteMixedStrategy([0.25, 0.75], [[5], [10]]),
+    ]
+    @test payoff(Π_blackbox, σ[1], others(σ, 1)) == payoff(Π_bilateral, σ[1], others(σ, 1))
 end
 
 @testitem "Player serialization" begin
