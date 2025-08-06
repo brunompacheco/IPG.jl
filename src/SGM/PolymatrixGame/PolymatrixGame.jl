@@ -1,8 +1,4 @@
 
-# The SampledGame layer is added for extensibility
-"A sampled game is a finite set of strategies for each player."
-const SampledGame = Dict{Player, Vector{Strategy}}
-
 include("Polymatrix.jl")
 
 "Normal-form polymatrix representation of the sampled game."
@@ -23,3 +19,5 @@ function add_new_strategy!(sg::PolymatrixSampledGame, p::Player, new_xp::PureStr
 
     update_polymatrix!(sg.polymatrix, p, sg.S_X)
 end
+
+include("Solve.jl")

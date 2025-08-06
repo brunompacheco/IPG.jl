@@ -219,6 +219,20 @@ end
     @test sampled_game.polymatrix == polymatrix
 end
 
+@testitem "Solving polymatrix game" setup=[Utilities] begin
+    players = get_example_two_player_game()
+
+    S_X = Dict(players[1] => [[10.0],[5.0]], players[2]=> [[1.0],[5.0]])
+
+    sampled_game = IPG.PolymatrixSampledGame(players, S_X)
+
+    σ_PNS = IPG.solve_PNS(sampled_game, SCIP.Optimizer)
+    σ_Sandholm = IPG.solve_Sandholm1(sampled_game, SCIP.Optimizer)
+
+    @test expected_value(identity, σ_PNS[players[1]]) == expected_value(identity, σ_Sandholm[players[1]]) == [5.0]
+    @test expected_value(identity, σ_PNS[players[2]]) == expected_value(identity, σ_Sandholm[players[2]]) == [1.0]
+end
+
 @testitem "Two-player game" begin
     IPG.initialize_strategies = IPG.initialize_strategies_player_alone
 
