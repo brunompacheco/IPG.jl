@@ -168,6 +168,43 @@ end
     @test best_x1 == [1.0, 1.0]  # the best response is always x = (1,1)
 end
 
+@testitem "Assignments" setup=[Utilities] begin
+    players = get_example_two_player_game()
+
+    assignment_p2 = Assignment(players[2], start_value.(all_variables(players[2])))
+    p2_assignment_refs = collect(keys(assignment_p2))
+    @test p2_assignment_refs ⊈ all_variables(players[1].X)
+    @test p2_assignment_refs == all_variables(players[2])
+
+    internalized_assignment_p2_p2 = IPG._internalize_assignment(players[2], assignment_p2)
+    @test internalized_assignment_p2_p2 == assignment_p2
+
+    internalized_assignment_p2_p1 = IPG._internalize_assignment(players[1], assignment_p2)
+    p2_assignment_refs_internalized_p1 = collect(keys(internalized_assignment_p2_p1))
+    @test p2_assignment_refs_internalized_p1 ⊈ all_variables(players[2].X)
+    @test p2_assignment_refs_internalized_p1 ⊈ all_variables(players[1])
+    @test p2_assignment_refs_internalized_p1 ⊆ all_variables(players[1].X)
+end
+
+@testitem "Payoff" setup=[Utilities] begin
+    players = get_example_two_player_game()
+
+    p1_x_bar = p2_x_bar = [100.0*rand()+1.0]
+    x_others = Profile{PureStrategy}(players[2] => p2_x_bar)
+
+    p1_payoff_fun = IPG.get_payoff_map(players[1], x_others)
+    @test p1_payoff_fun(p1_x_bar) == payoff(players[1], p1_x_bar, x_others) == 0.0
+
+    p2_x_bar = [0.0]
+    x_others = Profile{PureStrategy}(players[2] => p2_x_bar)
+    @test payoff(players[1], p1_x_bar, x_others) < 0.0
+
+    p2_x_bar = p1_x_bar / 2
+    x_others = Profile{PureStrategy}(players[1] => p1_x_bar)
+    @test payoff(players[2], p2_x_bar, x_others) > 0.0
+end
+
+#WIP
 @testitem "Initialization" setup=[Utilities] begin
     players = get_example_two_player_game()
     for player in players
@@ -175,7 +212,7 @@ end
     end
 
     # remove start values from player 1
-    for var in all_variables(players.X)
+    for var in all_variables(players[1].X)
         set_start_value(var, nothing)
     end
 

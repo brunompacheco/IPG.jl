@@ -1,13 +1,29 @@
 
+const AssignmentDict = Dict{VariableRef,Float64}
+
 """
 Create a dictionary of variable assignments (JuMP-style) from a pure strategy.
 """
-function build_var_assignments(player::Player, x::Vector{<:Any})
-    variable_assignments = Dict{VariableRef, Any}()
-    for (v, val) in zip(all_variables(player.X), x)
-        variable_assignments[v] = val
+Assignment(player::Player, x::Vector{Float64}) = AssignmentDict(
+    v => x_val for (v, x_val) in zip(all_variables(player), x)
+)
+Assignment(x::Profile{PureStrategy})::AssignmentDict = merge(collect(Assignment(p, x_p) for (p, x_p) in x)...)
+export Assignment
+
+"Translate variable references of the assignment to internal references."
+function _internalize_assignment(player::Player, assignment::AssignmentDict)
+    internal_assignment = AssignmentDict()
+    for (v_ref, v_val) in assignment
+        if v_ref ∈ all_variables(player.X)
+            internal_v_ref = v_ref
+        else
+            internal_v_ref = _get_internal_reference(player, v_ref)
+        end
+
+        internal_assignment[internal_v_ref] = v_val
     end
-    return variable_assignments
+
+    return internal_assignment
 end
 
 """
@@ -15,26 +31,24 @@ Get the payoff map for `player` given the pure strategy profile `x_others`.
 The payoff map is a function that takes the player's strategy and returns the payoff.
 """
 function get_payoff_map(player::Player, x_others::Profile{PureStrategy})
-    others_var_assignments = [build_var_assignments(other, x_other)
-                              for (other, x_other) in x_others]
-    var_assignments = merge(others_var_assignments...)
+    assignment_others = Assignment(x_others)
+    internal_assignment_others = _internalize_assignment(player, assignment_others)
 
-    function payoff_map(x_player::Vector{<:Any})
-        complete_var_assignments = merge(var_assignments, build_var_assignments(player, x_player))
-
-        return value(v -> complete_var_assignments[v], player.Π)
+    function payoff_map(x_player::Vector{Float64})
+        complete_assignment = merge(internal_assignment_others, Assignment(player, x_player))
+        return value(v -> complete_assignment[v], player.Π)
     end
 
     return payoff_map
 end
 
 "Evaluate the player's payoff when she plays `x_player` and the others play `x_others`."
-function payoff(player::Player, x_player::Vector{<:Any}, x_others::Profile{PureStrategy})
+function payoff(player::Player, x_player::Vector{Float64}, x_others::Profile{PureStrategy})
     return get_payoff_map(player, x_others)(x_player)
 end
 
 "Expected payoff of a pure strategy (`x_player`) against a mixed profile (`σ_others`)."
-function payoff(player::Player, x_player::Vector{<:Any}, σ_others::Profile{DiscreteMixedStrategy})
+function payoff(player::Player, x_player::Vector{Float64}, σ_others::Profile{DiscreteMixedStrategy})
     return expected_value(x_others -> payoff(player, x_player, x_others), σ_others)
 end
 
