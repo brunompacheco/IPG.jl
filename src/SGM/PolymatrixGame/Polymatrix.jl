@@ -5,7 +5,7 @@ const Polymatrix = Dict{Tuple{Player, Player}, Matrix{Float64}}
 
 "Compute the component of the payoff that doesn't depend on other players."
 function compute_self_payoff(p::Player, x_p::PureStrategy)
-    var_assignments_p = build_var_assignments(p, x_p)
+    var_assignments_p = Assignment(p, x_p)
 
     self_linear_payoff = sum(get(p.Π.aff.terms, v, 0) * var_assignments_p[v] for v in all_variables(p.X))
     # note the get() may be necessary as there may not be terms for all variables
@@ -17,8 +17,8 @@ function compute_self_payoff(p::Player, x_p::PureStrategy)
 end
 
 function compute_bilateral_payoff(p::Player, x_p::PureStrategy, k::Player, x_k::PureStrategy)
-    var_assignments_k = build_var_assignments(k, x_k)
-    var_assignments_p = build_var_assignments(p, x_p)  # TODO: this could be cached.
+    var_assignments_k = Assignment(k, x_k)
+    var_assignments_p = Assignment(p, x_p)  # TODO: this could be cached.
     # In fact, +1 for having Dict{VariableRef, Number} as the standard for assignments
 
     return sum(
