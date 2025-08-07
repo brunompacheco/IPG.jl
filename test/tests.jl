@@ -101,6 +101,22 @@ end
     @test σa ≈ σc
 end
 
+#WIP
+@testitem "Assignments" setup=[Utilities] begin
+    players = get_example_two_player_game()
+    x1_bar = [20.0]
+    x2_bar = [20.0]
+    v1_bar = Assignment(players[1], x1_bar)
+    v2_bar = Assignment(players[2], x2_bar)
+
+    payoff_res = payoff(players[1], x1_bar, Dict(players[2] => x2_bar))
+
+    best_response_payoff_p1 = IPG.simplify_expression(players[1].Π, v2_bar)
+    simplified_res = value(v -> v1_bar[v], best_response_payoff_p1)
+
+    @test simplified_res == payoff_res
+end
+
 @testitem "Finding feasible strategies" setup=[Utilities] begin
     X = Model()
     @variable(X, x[1:2])
