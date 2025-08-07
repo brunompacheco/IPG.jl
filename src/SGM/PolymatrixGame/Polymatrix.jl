@@ -7,11 +7,11 @@ const Polymatrix = Dict{Tuple{Player, Player}, Matrix{Float64}}
 function compute_self_payoff(p::Player, x_p::PureStrategy)
     var_assignments_p = build_var_assignments(p, x_p)
 
-    self_linear_payoff = sum(get(p.Π.aff.terms, v, 0) * var_assignments_p[v] for v in all_variables(p.X))
+    self_linear_payoff = sum(get(p.Π.aff.terms, v, 0) * var_assignments_p[v] for v in all_variables(p))
     # note the get() may be necessary as there may not be terms for all variables
     self_affine_payoff = p.Π.aff.constant + self_linear_payoff
     # TODO: maybe Dict{VariableRef, Number} should be the standard for assignments
-    self_quad_payoff = sum(get(p.Π.terms, UnorderedPair(v,v), 0) * var_assignments_p[v]^2 for v in all_variables(p.X))
+    self_quad_payoff = sum(get(p.Π.terms, UnorderedPair(v,v), 0) * var_assignments_p[v]^2 for v in all_variables(p))
 
     return self_affine_payoff + self_quad_payoff
 end
@@ -23,7 +23,7 @@ function compute_bilateral_payoff(p::Player, x_p::PureStrategy, k::Player, x_k::
 
     return sum(
         get(p.Π.terms, UnorderedPair(vp,vk), 0) * var_assignments_p[vp] * var_assignments_k[vk]
-        for vp in all_variables(p.X), vk in all_variables(k.X)
+        for vp in all_variables(p), vk in all_variables(k)
     )
 end
 

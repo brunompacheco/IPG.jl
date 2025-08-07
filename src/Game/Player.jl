@@ -1,5 +1,7 @@
 using JuMP, JSON3
 
+const VarToParamDict = Dict{VariableRef,VariableRef}
+
 "A player in an IPG."
 mutable struct Player
     "Strategy space."
@@ -7,14 +9,69 @@ mutable struct Player
     # TODO: using value(...) to manipulate expressions does not work for NonlinearExpr, see https://github.com/jump-dev/JuMP.jl/issues/4044 for an appropriate solution (another huge refactor))
     "Payoff expression."
     Π::AbstractJuMPScalar
+    _param_dict::VarToParamDict
 end
-function Player()
-    return Player(Model(), AffExpr(0))
+Player() = Player(Model(), AffExpr(NaN), VarToParamDict())
+Player(X::Model) = Player(X, AffExpr(NaN), VarToParamDict())
+function Player(X::Model, Π::AbstractJuMPScalar) 
+    player = Player(X)
+    set_payoff!(player, Π)
+    return player
 end
 export Player
 
+JuMP.all_variables(p::Player) = filter(v -> ~is_parameter(v), all_variables(p.X))
+
+"Maps external variables to internal parameters. Creates a new parameter if it does not exist."
+function _external_variable_to_parameter(player::Player, var::VariableRef)::VariableRef
+    if ~haskey(player._param_dict, var)
+        # create anonymous parameter with the same name as the variable
+        param = @variable(player.X, base_name=name(var), set=Parameter(NaN))
+
+        player._param_dict[var] = param
+    end
+
+    return player._param_dict[var]
+end
+
+"Get the internal variable/parameter corresponsing to a (possibly external) variable."
+function _get_internal_reference(player::Player, var::VariableRef)::VariableRef
+    if var ∈ all_variables(player)
+        # if the variable is already internal, return it
+        return var
+    else
+        # otherwise, return a parameter that corresponds to it
+        return _external_variable_to_parameter(player, var)
+    end
+end
+
 function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
-    player.Π = payoff
+    function _recursive_internalize_expr(expr::AbstractJuMPScalar)::AbstractJuMPScalar
+        if expr isa VariableRef
+            return _get_internal_reference(player, expr)
+        elseif expr isa AffExpr
+            internal_terms = typeof(expr.terms)(
+                _get_internal_reference(player, var) => coeff
+                for (var, coeff) in expr.terms
+            )
+            return AffExpr(expr.constant, )
+        elseif expr isa QuadExpr
+            internal_terms = typeof(expr.terms)(
+                UnorderedPair{VariableRef}(
+                    _get_internal_reference(player, vars.a),
+                    _get_internal_reference(player, vars.b)
+                ) => coeff
+                for (vars, coeff) in expr.terms
+            )
+            return QuadExpr(_recursive_internalize_expr(expr.aff), internal_terms)
+        elseif expr isa NonlinearExpr
+            error("Nonlinear expressions are not supported in IPG yet.")
+        else
+            error("Unknown expression type: $(typeof(expr))")
+        end
+    end
+
+    player.Π = _recursive_internalize_expr(payoff)
 end
 function set_payoff!(player::Player, payoff::Real)
     player.Π = AffExpr(payoff)
@@ -39,7 +96,7 @@ function find_feasible_pure_strategy(player::Player)::PureStrategy
     set_silent(player.X)
     optimize!(player.X)
 
-    return value.(all_variables(player.X))
+    return value.(all_variables(player))
 end
 
 "Solve the feasibility problem of all players, returning a feasible profile."
