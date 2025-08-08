@@ -1,15 +1,4 @@
 
-const AssignmentDict = Dict{VariableRef,Float64}
-
-"""
-Create a dictionary of variable assignments (JuMP-style) from a pure strategy.
-"""
-Assignment(player::Player, x::Vector{Float64}) = AssignmentDict(
-    v => x_val for (v, x_val) in zip(all_variables(player), x)
-)
-Assignment(x::Profile{PureStrategy})::AssignmentDict = merge(collect(Assignment(p, x_p) for (p, x_p) in x)...)
-export Assignment
-
 "Translate variable references of the assignment to internal references."
 function _internalize_assignment(player::Player, assignment::AssignmentDict)
     internal_assignment = AssignmentDict()
