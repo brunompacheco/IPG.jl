@@ -10,8 +10,8 @@ Assignment(player::Player, x::Vector{<:Any}) = AssignmentDict(zip(all_variables(
 Assignment(x::Profile{PureStrategy})::AssignmentDict = merge(collect(Assignment(p, x_p) for (p, x_p) in x)...)
 export Assignment
 
-function simplify_expression(expr::AbstractJuMPScalar, x::AssignmentDict)
-    function _recursive_simplify_expr(expr::AbstractJuMPScalar)::AbstractJuMPScalar
+function replace_in_expression(expr::AbstractJuMPScalar, x::AssignmentDict)
+    function _recursive_replace(expr::AbstractJuMPScalar)::AbstractJuMPScalar
         if expr isa VariableRef
             if haskey(x, expr)
                 return x[expr]
@@ -19,15 +19,25 @@ function simplify_expression(expr::AbstractJuMPScalar, x::AssignmentDict)
                 return expr
             end
         elseif expr isa AffExpr
+            # TODO: the following use of value is accidental and can break in the future.
             return value(v -> haskey(x, v) ? x[v] : v, expr)
         elseif expr isa QuadExpr
             return value(v -> haskey(x, v) ? x[v] : v, expr)
         elseif expr isa NonlinearExpr
+            # replaced_expr = NonlinearExpr(expr.head, Any[_recursive_replace(arg) for arg in expr.args]...)
+            # replaced_expr = NonlinearExpr(expr.head, map(_recursive_replace, expr.args))
+            # if ~any(arg isa NonlinearExpr for arg in expr.args)
+            #     replaced_expr =
+            #     g = MOI.Nonlinear.SymbolicAD.simplify(moi_function(f))
+            #     replaced_expr = jump_function(model, g)
+
+            # end
+            # return 
             error("Nonlinear expressions are not supported in IPG yet.")
         else
-            error("Unknown expression type: $(typeof(expr))")
+            return expr
         end
     end
 
-    return _recursive_simplify_expr(expr)
+    return _recursive_replace(expr)
 end
