@@ -65,9 +65,9 @@ function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
             )
             return QuadExpr(_recursive_internalize_expr(expr.aff), internal_terms)
         elseif expr isa NonlinearExpr
-            error("Nonlinear expressions are not supported in IPG yet.")
+            return NonlinearExpr(expr.head, Vector{Any}(map(_recursive_internalize_expr, expr.args)))
         else
-            error("Unknown expression type: $(typeof(expr))")
+            return expr
         end
     end
 

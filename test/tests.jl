@@ -98,17 +98,35 @@ end
         @test all_variables(p) == all_variables(p.X)
     end
 
-    function player_payoff(x_self, x_other)
-        return -x_self * x_self + x_self * x_other
-    end
+    set_payoff!(players[1], -x1 * x1 + x1 * x2)
+    set_payoff!(players[2], x2 / (x1*x1))  # just some nonlinear function that is actually linear for the player
+    @assert players[2].Π isa NonlinearExpr
 
     for p in players
-        set_payoff!(p, player_payoff(x1, x2))
         @test owner_model(p.Π) === p.X
     end
 
     @test collect(keys(players[1]._param_dict)) == all_variables(players[2])
     @test collect(keys(players[2]._param_dict)) == all_variables(players[1])
+
+    x1_bar = [20.0]
+    x2_bar = [20.0]
+    v1_bar = Assignment(players[1], x1_bar)
+    v2_bar = Assignment(players[2], x2_bar)
+
+    payoff_res = payoff(players[1], x1_bar, Profile{PureStrategy}(players[2] => x2_bar))
+    best_response_payoff_p1 = IPG.replace_in_payoff(players[1], v2_bar)
+    simplified_res = value(v -> v1_bar[v], best_response_payoff_p1)
+
+    @test simplified_res == payoff_res
+
+    payoff_res = payoff(players[2], x2_bar, Profile{PureStrategy}(players[1] => x1_bar))
+    best_response_payoff_p2 = IPG.replace_in_payoff(players[2], v1_bar)
+    println(typeof(best_response_payoff_p2))
+    @test best_response_payoff_p2 isa AffExpr
+    simplified_res = value(v -> v2_bar[v], best_response_payoff_p2)
+
+    @test simplified_res == payoff_res
 end
 
 @testitem "DiscreteMixedStrategy" begin
@@ -143,10 +161,21 @@ end
 
     payoff_res = payoff(players[1], x1_bar, Dict(players[2] => x2_bar))
 
-    best_response_payoff_p1 = IPG.replace_in_payoff(players[1], v2_bar)
+    v2_bar_for_p1 = IPG._internalize_assignment(players[1], v2_bar)
+    best_response_payoff_p1 = IPG.replace(players[1].Π, v2_bar_for_p1)
     simplified_res = value(v -> v1_bar[v], best_response_payoff_p1)
 
     @test simplified_res == payoff_res
+
+    x1 = all_variables(players[1].X)[1]
+    x2 = all_variables(players[2].X)[1]
+    expr = (x1*x2) / (2*x1)
+    @assert expr isa NonlinearExpr
+
+    replaced_expr = IPG.replace(expr, IPG.AssignmentDict(x1 => 1.0))
+
+    @test owner_model(replaced_expr) === players[2].X
+    @test replaced_expr isa AffExpr
 end
 
 @testitem "Finding feasible strategies" setup=[Utilities] begin
