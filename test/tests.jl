@@ -143,7 +143,7 @@ end
 
     payoff_res = payoff(players[1], x1_bar, Dict(players[2] => x2_bar))
 
-    best_response_payoff_p1 = IPG.replace(players[1].Π, v2_bar)
+    best_response_payoff_p1 = IPG.replace_in_payoff(players[1], v2_bar)
     simplified_res = value(v -> v1_bar[v], best_response_payoff_p1)
 
     @test simplified_res == payoff_res

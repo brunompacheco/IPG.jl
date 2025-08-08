@@ -15,6 +15,11 @@ function _internalize_assignment(player::Player, assignment::AssignmentDict)
     return internal_assignment
 end
 
+function replace_in_payoff(player::Player, assignment::AssignmentDict)::AbstractJuMPScalar
+    internal_assignment = _internalize_assignment(player, assignment)
+    return replace(player.Π, internal_assignment)
+end
+
 """
 Get the payoff map for `player` given the pure strategy profile `x_others`.
 The payoff map is a function that takes the player's strategy and returns the payoff.
