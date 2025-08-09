@@ -540,8 +540,8 @@ end
     end
 
     players = [
-        Player(X1, convert(JuMP.GenericNonlinearExpr, player_payoff(x1, x2))),
-        Player(X2, convert(JuMP.GenericNonlinearExpr, player_payoff(x2, x1)))
+        Player(X1, NonlinearExpr(:+, Any[player_payoff(x1, x2)])),
+        Player(X2, NonlinearExpr(:+, Any[player_payoff(x2, x1)])),
     ]
 
     Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
@@ -589,10 +589,10 @@ end
     @constraint(P2.X, x2 >= 0)
 
     set_payoff!(P1, -x1*x1 + x1*x2)
-    @test P1.Π == -x1*x1 + x1*x2
+    @test string(P1.Π) == string(-x1*x1 + x1*x2)
 
     set_payoff!(P2, -x2*x2 + x1*x2)
-    @test P2.Π == -x2*x2 + x1*x2
+    @test string(P2.Π) == string(-x2*x2 + x1*x2)
 
     Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5)
 
