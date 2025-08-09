@@ -24,13 +24,14 @@ function initialize_strategies_player_alone(players::Vector{Player})
     S_X = empty_S_X(players)
 
     # profile that simulates players being alone (all others play 0)
-    x_others_dummy = Profile{PureStrategy}(player => zeros(length(all_variables(player))) for player in players)
+    x_dummy = Profile{PureStrategy}(player => zeros(length(all_variables(player))) for player in players)
 
     for player in players
         xp_init = start_value.(all_variables(player))
 
+        println(xp_init)
         if nothing in xp_init
-            xp_init = best_response(player, x_others_dummy)
+            xp_init = best_response(player, others(x_dummy, player))
         end
 
         push!(S_X[player], xp_init)

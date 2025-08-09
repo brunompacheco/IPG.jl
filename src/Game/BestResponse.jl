@@ -1,6 +1,8 @@
 
 "Compute `player`'s best response to the mixed strategy profile `σ_others`."
 function best_response(player::Player, σ_others::Profile{DiscreteMixedStrategy})
+    @assert player ∉ keys(σ_others) "Player must not be in the profile of others."
+
     obj = expected_value(x_others -> replace_in_payoff(player, Assignment(x_others)), σ_others)
     
     println(obj)
