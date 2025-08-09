@@ -391,13 +391,26 @@ end
     @test isnothing(new_x_p)
 end
 
-# TODO: there is a bug in JuMP when evaluating nonlinear expressions with variable
-# references. see https://github.com/jump-dev/JuMP.jl/issues/4044. until the issue is
-# fixed, this will likely not work.
 @testitem "Nonlinear deviation reaction" setup=[Utilities] begin
-    players = [Player(p.X, convert(JuMP.GenericNonlinearExpr, p.Π)) for p in get_example_two_player_game()]
-    for player in players
-        IPG.set_optimizer(player, SCIP.Optimizer)
+    # Example 5.3 from the IPG paper
+    X1 = Model(SCIP.Optimizer)
+    @variable(X1, x1, start=10.0)
+    @constraint(X1, x1 >= 0)
+
+    X2 = Model(SCIP.Optimizer)
+    @variable(X2, x2, start=10.0)
+    @constraint(X2, x2 >= 0)
+
+    function player_payoff(x_self, x_other)
+        return -x_self * x_self + x_self * x_other * x_other
+    end
+
+    players = [
+        Player(X1, player_payoff(x1, x2)),
+        Player(X2, player_payoff(x2, x1))
+    ]
+    for p in players
+        @test p.Π isa NonlinearExpr
     end
 
     S_X = IPG.initialize_strategies(players)
@@ -418,6 +431,7 @@ end
     # there should be no deviation from an equilibrium
     σ_NE = Profile{DiscreteMixedStrategy}(player => [0.0] for player in players)
     payoff_improvement, player, new_x_p = IPG.find_deviation(players, σ_NE)
+
     @test payoff_improvement == 0.0
     @test isnothing(player)
     @test isnothing(new_x_p)

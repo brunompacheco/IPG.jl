@@ -25,14 +25,21 @@ function replace(expr::AbstractJuMPScalar, assignment::AssignmentDict)
                 #TODO: the following is to be replaced by JuMP.simplify once https://github.com/jump-dev/JuMP.jl/pull/4047 gets merged
                 g = MOI.Nonlinear.SymbolicAD.simplify(moi_function(replaced_expr))
 
+                # TODO: this owner model assignment is really ugly. maybe the owner model should be an argument
                 terms_in_replaced_expr = filter(v -> v isa JuMP.AbstractJuMPScalar, replaced_expr.args)
+                owner = nothing
+                for term in terms_in_replaced_expr
+                    term_owner = owner_model(term)
+                    if ~isnothing(term_owner)
+                        owner = term_owner
+                        break
+                    end
+                end
 
-                if length(terms_in_replaced_expr) == 0
+                if isnothing(owner)
                     replaced_expr = g  # the result is likely just a number
                 else
                     # update owner model
-                    owner = owner_model(first(terms_in_replaced_expr))
-
                     replaced_expr = jump_function(owner, g)
                 end
             end
