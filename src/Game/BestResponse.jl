@@ -1,9 +1,9 @@
 
 "Compute `player`'s best response to the mixed strategy profile `σ_others`."
 function best_response(player::Player, σ_others::Profile{DiscreteMixedStrategy})
-    vars_player = all_variables(player)
-
-    obj = payoff(player, vars_player, σ_others)
+    obj = expected_value(x_others -> replace_in_payoff(player, Assignment(x_others)), σ_others)
+    
+    println(obj)
 
     # I don't know why, but it was raising an error without changing the sense to feasibility first
     set_objective_sense(player.X, JuMP.MOI.FEASIBILITY_SENSE)
@@ -12,7 +12,7 @@ function best_response(player::Player, σ_others::Profile{DiscreteMixedStrategy}
     set_silent(player.X)
     optimize!(player.X)
 
-    return value.(vars_player)
+    return value.(all_variables(player))
 end
 
 "Compute `player`'s best response to the pure strategy profile `x_others`."
@@ -24,7 +24,7 @@ function best_response(player::Player, x_others::Profile{PureStrategy})
     set_objective_sense(player.X, JuMP.MOI.FEASIBILITY_SENSE)
     @objective(player.X, JuMP.MOI.MAX_SENSE, obj)
 
-    unset_silent(player.X)
+    set_silent(player.X)
     optimize!(player.X)
 
     return value.(all_variables(player))

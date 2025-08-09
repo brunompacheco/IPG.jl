@@ -129,7 +129,29 @@ end
     @test simplified_res == payoff_res
 end
 
-@testitem "Best Response" setup=[Utilities] begin
+@testitem "Mixed strategies in payoffs" setup=[Utilities] begin
+    X = Model(); @variable(X, x[1:2])
+    Y = Model(); @variable(Y, y[1:2])
+
+    player1 = Player(X, x'* y)
+    player2 = Player(Y, y[1] * sqrt(x[1] / x[2]))
+
+    σ_y = DiscreteMixedStrategy([0.2, 0.8], [[10., 0.], [0., 10.]])
+    obj_expr = expected_value(
+        y_bar -> IPG.replace_in_payoff(player1, Assignment(y_bar)),
+        Dict(player2 => σ_y)
+    )
+    @test obj_expr == 2*x[1] + 8*x[2]
+
+    σ_x = DiscreteMixedStrategy([0.7, 0.3], [[4., 1.], [1., 4.]])
+    obj_expr = expected_value(
+        x_bar -> IPG.replace_in_payoff(player2, Assignment(x_bar)),
+        Dict(player1 => σ_x)
+    )
+    @test obj_expr == (0.7*2 + 0.3*0.5) * y[1]
+end
+
+@testitem "Best Response pure profile" setup=[Utilities] begin
     X = Model(SCIP.Optimizer)
     @variable(X, x[1:2])
     @constraint(X, 1 .<= 2 .* x .+ 1 .<= 3)  # dummy unit cube
@@ -154,6 +176,29 @@ end
     best_x1 = IPG.best_response(player1, pure_profile)
     @test length(best_x1) == 2
     @test best_x1 == x_opt == [1.0, 1.0]  # the best response is always x = (1,1)
+end
+
+@testitem "Best response mixed profile" setup=[Utilities] begin
+    X = Model(SCIP.Optimizer)
+    @variable(X, x[1:2], start=0.5)
+    @constraint(X, 1 .<= 2 .* x .+ 1 .<= 3)  # dummy unit cube
+    @constraint(X, x[1] + x[2] == 1)  # constraint to make it non-trivial
+
+    Y = Model()
+    @variable(Y, y[1:2])
+    @constraint(Y, 1 .<= 2 .* y .+ 1 .<= 3)  # dummy unit cube
+
+    player1 = Player(X, x'* y)
+    player2 = Player(Y)
+
+    σ_player2_1 = DiscreteMixedStrategy([0.5, 0.5], [[1., 0.], [0., 1.]])
+    @test IPG.best_response(player1, Dict(player2 => σ_player2_1)) == [0.5, 0.5]  # start value is optimal
+
+    σ_player2_3 = DiscreteMixedStrategy([0.4, 0.6], [[1., 0.], [0., 1.]])
+    @test IPG.best_response(player1, Dict(player2 => σ_player2_3)) == [0.0, 1.0]
+
+    σ_player2_2 = DiscreteMixedStrategy([0.6, 0.4], [[1., 0.], [0., 1.]])
+    @test IPG.best_response(player1, Dict(player2 => σ_player2_2)) == [1.0, 0.0]
 end
 
 @testitem "DiscreteMixedStrategy" begin
@@ -269,6 +314,13 @@ end
     p2_x_bar = p1_x_bar / 2
     x_others = Profile{PureStrategy}(players[1] => p1_x_bar)
     @test payoff(players[2], p2_x_bar, x_others) > 0.0
+
+    x_others = Profile{PureStrategy}(players[2] => p2_x_bar)
+    p2_σ = DiscreteMixedStrategy([0.3, 0.7], [p2_x_bar, p2_x_bar])
+    σ_others = Profile{DiscreteMixedStrategy}(players[2] => p2_σ)
+    payoff_mixed = payoff(players[1], p1_x_bar, σ_others)
+    payoff_pure = payoff(players[1], p1_x_bar, x_others)
+    @test payoff_mixed ≈ payoff_pure
 end
 
 #WIP
