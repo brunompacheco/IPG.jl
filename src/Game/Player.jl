@@ -28,7 +28,7 @@ function _maybe_create_parameter_for_external_var(player::Player, var::VariableR
 
     if ~haskey(player._param_dict, var)
         # create anonymous parameter with the same name as the variable
-        param = @variable(player.X, base_name=name(var), set=Parameter(NaN))
+        param = @variable(player.X, base_name=name(var), set=Parameter(1))
 
         player._param_dict[var] = param
     end

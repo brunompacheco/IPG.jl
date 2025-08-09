@@ -1,5 +1,5 @@
 
-function replace_in_payoff(player::Player, assignment::AssignmentDict)::AbstractJuMPScalar
+function replace_in_payoff(player::Player, assignment::AssignmentDict)
     internal_assignment = _internalize_assignment(player, assignment)
     return replace(player.Π, internal_assignment)
 end
