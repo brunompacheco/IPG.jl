@@ -323,7 +323,6 @@ end
     @test payoff_mixed ≈ payoff_pure
 end
 
-#WIP
 @testitem "Initialization" setup=[Utilities] begin
     players = get_example_two_player_game()
     for player in players
