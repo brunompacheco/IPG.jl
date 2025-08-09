@@ -44,3 +44,17 @@ function replace(expr::AbstractJuMPScalar, assignment::AssignmentDict)
 
     return _recursive_replace(expr)
 end
+
+"Translate variable references of the assignment to internal references."
+function _internalize_assignment(player::Player, assignment::AssignmentDict)
+    internal_assignment = AssignmentDict()
+    for (v_ref, v_val) in assignment
+        if v_ref ∈ all_variables(player.X)
+            internal_assignment[v_ref] = v_val
+        elseif v_ref ∈ keys(player._param_dict)
+            internal_assignment[player._param_dict[v_ref]] = v_val
+        end
+    end
+
+    return internal_assignment
+end
