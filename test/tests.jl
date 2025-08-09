@@ -521,7 +521,6 @@ end
 end
 
 "SGM should work for any Nonlinear two-player game."
-# TODO: see previous comment about the issue with NonlinearExpr
 @testitem "Nonlinear example 5.3" setup=[Utilities] begin
     # guarantee reproducibility (always start with player 1)
     IPG.get_player_order = IPG.get_player_order_fixed_descending
@@ -548,7 +547,7 @@ end
 
     @test [σ[players[1]].supp for σ in Σ] ≈ [
         [[10.0]],
-        [[10.0]],
+        [[10.0]]
         [[2.5]],
         [[2.5]],
         [[0.625]]
@@ -601,25 +600,24 @@ end
     @test Σ[end][P2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
 end
 
-# TODO: this is also waiting for the issue on NonlinearExpr to be fixed (aka, the new refactor)
-# @testitem "README Example Two-player" begin
-#     player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
+@testitem "README Example Two-player" begin
+    player_payoff(xp, x_others) = -(xp[1] * xp[1]) + xp[1] * prod(x_others[:][1])
 
-#     players = [
-#         Player(BlackBoxPayoff(player_payoff), 1),
-#         Player(BlackBoxPayoff(player_payoff), 2)
-#     ];
+    players = [
+        Player(BlackBoxPayoff(player_payoff), 1),
+        Player(BlackBoxPayoff(player_payoff), 2)
+    ];
 
-#     @variable(players[1].X, x1, start=10); @constraint(players[1].X, x1 >= 0);
+    @variable(players[1].X, x1, start=10); @constraint(players[1].X, x1 >= 0);
 
-#     @variable(players[2].X, x2, start=10); @constraint(players[2].X, x2 >= 0);
+    @variable(players[2].X, x2, start=10); @constraint(players[2].X, x2 >= 0);
 
-#     Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
+    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
 
-#     # Verify the final strategies match the expected values
-#     @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
-#     @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
-# end
+    # Verify the final strategies match the expected values
+    @test Σ[end][1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
+    @test Σ[end][2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
+end
 
 # @testitem "Player serialization" begin
 #     X1 = Model()
