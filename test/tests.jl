@@ -129,6 +129,33 @@ end
     @test simplified_res == payoff_res
 end
 
+@testitem "Best Response" setup=[Utilities] begin
+    X = Model(SCIP.Optimizer)
+    @variable(X, x[1:2])
+    @constraint(X, 1 .<= 2 .* x .+ 1 .<= 3)  # dummy unit cube
+
+    player1 = Player(X, x[1] * x[2])
+
+    @objective(X, Max, x[1] * x[2])
+
+    set_silent(X)
+    optimize!(X)
+
+    x_opt = value.(x)
+
+    Y = Model()
+    @variable(Y, y[1:2])
+    @constraint(Y, 1 .<= 2 .* y .+ 1 .<= 3)  # dummy unit cube
+
+    player2 = Player(Y)
+
+    # dummy profile
+    pure_profile = Dict(player2 => [1.0, 1.0])
+    best_x1 = IPG.best_response(player1, pure_profile)
+    @test length(best_x1) == 2
+    @test best_x1 == x_opt == [1.0, 1.0]  # the best response is always x = (1,1)
+end
+
 @testitem "DiscreteMixedStrategy" begin
     # TODO: really annoying that I have to pass the support (PureStrategy) as floats. this happens because the vector is not automatically promoted when there is another argument in the method.
     σp = DiscreteMixedStrategy([0.5, 0.5], [[1., 0.], [0., 1.]])
@@ -206,11 +233,6 @@ end
     @test length(y2) == 2
     @test all(y2 .>= 0)
     @test all(y2 .<= 1.0)
-
-    pure_profile = Dict(player2 => y2)
-    best_x1 = IPG.best_response(player1, pure_profile)
-    @test length(best_x1) == 2
-    @test best_x1 == [1.0, 1.0]  # the best response is always x = (1,1)
 end
 
 @testitem "Assignments" setup=[Utilities] begin
