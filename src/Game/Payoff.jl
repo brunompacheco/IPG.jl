@@ -4,12 +4,10 @@ function _internalize_assignment(player::Player, assignment::AssignmentDict)
     internal_assignment = AssignmentDict()
     for (v_ref, v_val) in assignment
         if v_ref ∈ all_variables(player.X)
-            internal_v_ref = v_ref
-        else
-            internal_v_ref = _get_internal_reference(player, v_ref)
+            internal_assignment[v_ref] = v_val
+        elseif v_ref ∈ keys(player._param_dict)
+            internal_assignment[player._param_dict[v_ref]] = v_val
         end
-
-        internal_assignment[internal_v_ref] = v_val
     end
 
     return internal_assignment
