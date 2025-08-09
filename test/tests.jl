@@ -448,11 +448,18 @@ end
 
     polymatrix = IPG.get_polymatrix_bilateral(players, S_X)
 
+    for p in players
+        for x_pure in S_X[p]
+            @test IPG.compute_self_payoff(p, x_pure) == - x_pure[1]^2
+        end
+    end
+
+    p1, p2 = players
+    @test IPG.compute_bilateral_payoff(p1, S_X[p1][1], p2, S_X[p2][1]) == IPG.compute_bilateral_payoff(p2, S_X[p2][1], p1, S_X[p1][1]) == 10*10
+
     @test polymatrix[players[1], players[1]] == polymatrix[players[2], players[2]] == zeros(2, 2)
-    @test polymatrix[players[1], players[2]] == polymatrix[players[2], players[1]] == [
-        0.0 -50.0;
-        25.0 0.0
-    ]
+    @test polymatrix[players[1], players[2]] == polymatrix[players[2], players[1]]
+    @test polymatrix[players[1], players[2]]== [ 0.0 -50.0; 25.0 0.0 ]
 
     two_player_polymatrix = IPG.get_polymatrix_twoplayers(players[1], players[2], S_X)
 

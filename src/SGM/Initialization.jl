@@ -29,7 +29,6 @@ function initialize_strategies_player_alone(players::Vector{Player})
     for player in players
         xp_init = start_value.(all_variables(player))
 
-        println(xp_init)
         if nothing in xp_init
             xp_init = best_response(player, others(x_dummy, player))
         end

@@ -3,28 +3,60 @@ using LinearAlgebra
 
 const Polymatrix = Dict{Tuple{Player, Player}, Matrix{Float64}}
 
+
+function compute_self_payoff(Π::AffExpr, v_bar::AssignmentDict)::Float64
+    # note the get() may be necessary as there may not be terms for all variables
+    self_linear_payoff = sum(get(Π.terms, ref, 0) * val for (ref, val) in v_bar)
+
+    # constant is here by convention (inherited from NormalGames.jl)
+    return Π.constant + self_linear_payoff
+end
+
+function compute_self_payoff(Π::QuadExpr, v_bar::AssignmentDict)::Float64
+    # TODO: maybe Dict{VariableRef, Number} should be the standard for assignments
+    self_quad_payoff = sum(get(Π.terms, UnorderedPair(ref,ref), 0) * val^2 for (ref, val) in v_bar)
+
+    return self_quad_payoff + compute_self_payoff(Π.aff, v_bar)
+end
+
 "Compute the component of the payoff that doesn't depend on other players."
 function compute_self_payoff(p::Player, x_p::PureStrategy)
-    var_assignments_p = build_var_assignments(p, x_p)
+    v_bar = Assignment(p, x_p)
 
-    self_linear_payoff = sum(get(p.Π.aff.terms, v, 0) * var_assignments_p[v] for v in all_variables(p))
-    # note the get() may be necessary as there may not be terms for all variables
-    self_affine_payoff = p.Π.aff.constant + self_linear_payoff
-    # TODO: maybe Dict{VariableRef, Number} should be the standard for assignments
-    self_quad_payoff = sum(get(p.Π.terms, UnorderedPair(v,v), 0) * var_assignments_p[v]^2 for v in all_variables(p))
+    return compute_self_payoff(p.Π, v_bar)
+end
 
-    return self_affine_payoff + self_quad_payoff
+"Compute player p's payoff component from some *other* player playing v_bar_k."
+function compute_others_payoff(Π::AffExpr, v_bar_k::AssignmentDict)::Float64
+    # TODO: identical to compute_self_payoff(::AffExpr, ::AssignmentDict), except for the constant. I could refactor
+    return sum(  # terms of the form q_j * xk_j, where xk_j belongs to player k
+        get(Π.terms, ref, 0) * val for (ref, val) in v_bar_k
+    )
+end
+
+"Compute player p's payoff component from her playing v_bar_p and some *other* player playing v_bar_k."
+function compute_bilateral_payoff(Π::QuadExpr, v_bar_p::AssignmentDict, v_bar_k::AssignmentDict)::Float64
+    mixed_components = sum(  # terms of the form q_ij * xp_i * xk_j, where xp_i belongs to player p and xk_j belongs to player k
+        get(Π.terms, UnorderedPair(ref_i,ref_j), 0) * val_i * val_j
+        for (ref_i, val_i) in v_bar_p
+        for (ref_j, val_j) in v_bar_k
+    )
+    other_components = sum(  # terms of the form q_ij * xk_i * xk_j, where xk_i,xk_j belong to player k
+        get(Π.terms, UnorderedPair(ref_i,ref_j), 0) * val_i * val_j
+        for (ref_i, val_i) in v_bar_k
+        for (ref_j, val_j) in v_bar_k
+    )
+    other_components = other_components / 2  # I'm iterating over al possible unordered pairs twice!
+
+    return mixed_components + other_components + compute_others_payoff(Π.aff, v_bar_k)
 end
 
 function compute_bilateral_payoff(p::Player, x_p::PureStrategy, k::Player, x_k::PureStrategy)
-    var_assignments_k = build_var_assignments(k, x_k)
-    var_assignments_p = build_var_assignments(p, x_p)  # TODO: this could be cached.
     # In fact, +1 for having Dict{VariableRef, Number} as the standard for assignments
+    v_bar_p = Assignment(p, x_p)  # TODO: this could be cached.
+    v_bar_k = _internalize_assignment(p, Assignment(k, x_k))
 
-    return sum(
-        get(p.Π.terms, UnorderedPair(vp,vk), 0) * var_assignments_p[vp] * var_assignments_k[vk]
-        for vp in all_variables(p), vk in all_variables(k)
-    )
+    return compute_bilateral_payoff(p.Π, v_bar_p, v_bar_k)
 end
 
 "Compute polymatrix for normal form game from sample of strategies."
