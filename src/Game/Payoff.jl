@@ -37,12 +37,12 @@ function get_payoff_map(player::Player, x_others::Profile{PureStrategy})
 end
 
 "Evaluate the player's payoff when she plays `x_player` and the others play `x_others`."
-function payoff(player::Player, x_player::Vector{Float64}, x_others::Profile{PureStrategy})
+function payoff(player::Player, x_player::PureStrategy, x_others::Profile{PureStrategy})
     return get_payoff_map(player, x_others)(x_player)
 end
 
 "Expected payoff of a pure strategy (`x_player`) against a mixed profile (`σ_others`)."
-function payoff(player::Player, x_player::Vector{Float64}, σ_others::Profile{DiscreteMixedStrategy})
+function payoff(player::Player, x_player::PureStrategy, σ_others::Profile{DiscreteMixedStrategy})
     return expected_value(x_others -> payoff(player, x_player, x_others), σ_others)
 end
 
