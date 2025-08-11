@@ -24,9 +24,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive  # Pull the NormalGames.jl package (unregistered)
-          token: ${{ secrets.PAT_TOKEN }}
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.julia-version }}
