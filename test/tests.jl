@@ -94,7 +94,7 @@ end
     players = [Player(X1), Player(X2)]
 
     for p in players
-        # vars should match, as we haven't added any parater, i.e, one player is "unaware" of the other
+        # vars should match, as we haven't added any parameter, i.e, one player is "unaware" of the other
         @test all_variables(p) == all_variables(p.X)
     end
 
