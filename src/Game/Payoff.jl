@@ -1,13 +1,7 @@
 
-"""
-Create a dictionary of variable assignments (JuMP-style) from a pure strategy.
-"""
-function build_var_assignments(player::Player, x::Vector{<:Any})
-    variable_assignments = Dict{VariableRef, Any}()
-    for (v, val) in zip(all_variables(player.X), x)
-        variable_assignments[v] = val
-    end
-    return variable_assignments
+function replace_in_payoff(player::Player, assignment::AssignmentDict)
+    internal_assignment = _internalize_assignment(player, assignment)
+    return replace(player.Π, internal_assignment)
 end
 
 """
@@ -15,26 +9,24 @@ Get the payoff map for `player` given the pure strategy profile `x_others`.
 The payoff map is a function that takes the player's strategy and returns the payoff.
 """
 function get_payoff_map(player::Player, x_others::Profile{PureStrategy})
-    others_var_assignments = [build_var_assignments(other, x_other)
-                              for (other, x_other) in x_others]
-    var_assignments = merge(others_var_assignments...)
+    assignment_others = Assignment(x_others)
+    internal_assignment_others = _internalize_assignment(player, assignment_others)
 
-    function payoff_map(x_player::Vector{<:Any})
-        complete_var_assignments = merge(var_assignments, build_var_assignments(player, x_player))
-
-        return value(v -> complete_var_assignments[v], player.Π)
+    function payoff_map(x_player::Vector{Float64})
+        complete_assignment = merge(internal_assignment_others, Assignment(player, x_player))
+        return value(v -> complete_assignment[v], player.Π)
     end
 
     return payoff_map
 end
 
 "Evaluate the player's payoff when she plays `x_player` and the others play `x_others`."
-function payoff(player::Player, x_player::Vector{<:Any}, x_others::Profile{PureStrategy})
+function payoff(player::Player, x_player::PureStrategy, x_others::Profile{PureStrategy})
     return get_payoff_map(player, x_others)(x_player)
 end
 
 "Expected payoff of a pure strategy (`x_player`) against a mixed profile (`σ_others`)."
-function payoff(player::Player, x_player::Vector{<:Any}, σ_others::Profile{DiscreteMixedStrategy})
+function payoff(player::Player, x_player::PureStrategy, σ_others::Profile{DiscreteMixedStrategy})
     return expected_value(x_others -> payoff(player, x_player, x_others), σ_others)
 end
 
