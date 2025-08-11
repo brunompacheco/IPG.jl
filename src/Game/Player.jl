@@ -37,6 +37,7 @@ function _maybe_create_parameter_for_external_var(player::Player, var::VariableR
 end
 
 function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
+    _recursive_internalize_expr(expr::Number) = expr
     function _recursive_internalize_expr(expr::AbstractJuMPScalar)::AbstractJuMPScalar
         if expr isa VariableRef
             return _maybe_create_parameter_for_external_var(player, expr)
@@ -45,7 +46,7 @@ function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
                 _maybe_create_parameter_for_external_var(player, var) => coeff
                 for (var, coeff) in expr.terms
             )
-            return AffExpr(expr.constant, )
+            return AffExpr(expr.constant, internal_terms)
         elseif expr isa QuadExpr
             internal_terms = typeof(expr.terms)(
                 UnorderedPair{VariableRef}(
@@ -58,7 +59,7 @@ function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
         elseif expr isa NonlinearExpr
             return NonlinearExpr(expr.head, Vector{Any}(map(_recursive_internalize_expr, expr.args)))
         else
-            return expr
+            error("Unsupported expression type: $(typeof(expr))")
         end
     end
 

@@ -10,6 +10,7 @@ export Assignment
 
 "Replace the variables in an expression with their assigned values."
 function replace(expr::AbstractJuMPScalar, assignment::AssignmentDict)
+    _recursive_replace(expr::Number) = expr
     function _recursive_replace(expr::AbstractJuMPScalar)
         if expr isa VariableRef
             return get(assignment, expr, expr)
