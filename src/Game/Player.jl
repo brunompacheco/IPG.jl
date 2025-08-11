@@ -12,7 +12,8 @@ mutable struct Player
     _param_dict::VarToParamDict
 end
 Player() = Player(Model(), AffExpr(NaN), VarToParamDict())
-Player(X::Model) = Player(X, AffExpr(NaN), VarToParamDict())
+Player() = Player(Model(), AffExpr(0.0), VarToParamDict())
+Player(X::Model) = Player(X, AffExpr(0.0), VarToParamDict())
 function Player(X::Model, Π::AbstractJuMPScalar) 
     player = Player(X)
     set_payoff!(player, Π)
@@ -20,13 +21,13 @@ function Player(X::Model, Π::AbstractJuMPScalar)
 end
 export Player
 
-JuMP.all_variables(p::Player) = filter(v -> ~is_parameter(v), all_variables(p.X))
+JuMP.all_variables(p::Player) = filter(v -> !is_parameter(v), all_variables(p.X))
 
 "Maps external variables to internal parameters. Creates a new parameter if it does not exist."
 function _maybe_create_parameter_for_external_var(player::Player, var::VariableRef)::VariableRef
     var ∈ all_variables(player.X) && return var
 
-    if ~haskey(player._param_dict, var)
+    if !haskey(player._param_dict, var)
         # create anonymous parameter with the same name as the variable
         param = @variable(player.X, base_name=name(var), set=Parameter(1))
 
