@@ -20,7 +20,6 @@ function SGM(players::Vector{Player}, optimizer_factory; max_iter=100, dev_tol=1
     # the strategy space of each player or, in case there is none, a feasibility problem is
     # solved
 
-    # TODO: I should use S_X for the sampled game, rather than the strategies
     S_X = initialize_strategies(players)
     sampled_game = PolymatrixSampledGame(players, S_X)
     verbose && println("Game initialized with strategies: ", S_X)
