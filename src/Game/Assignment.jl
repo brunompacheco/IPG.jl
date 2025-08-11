@@ -22,8 +22,8 @@ function replace(expr::AbstractJuMPScalar, assignment::AssignmentDict)
         elseif expr isa NonlinearExpr
             replaced_expr = NonlinearExpr(expr.head, Vector{Any}(map(_recursive_replace, expr.args)))
             # If there are no nonlinear arguments, we can try to simplify the resulting expression
-            if ~any(arg isa NonlinearExpr for arg in replaced_expr.args)
-                #TODO: the following is to be replaced by JuMP.simplify once https://github.com/jump-dev/JuMP.jl/pull/4047 gets merged
+            if !any(arg isa NonlinearExpr for arg in replaced_expr.args)
+                # TODO: the following is to be replaced by JuMP.simplify once https://github.com/jump-dev/JuMP.jl/pull/4047 gets merged
                 g = MOI.Nonlinear.SymbolicAD.simplify(moi_function(replaced_expr))
 
                 # TODO: this owner model assignment is really ugly. maybe the owner model should be an argument
@@ -38,7 +38,12 @@ function replace(expr::AbstractJuMPScalar, assignment::AssignmentDict)
                 end
 
                 if isnothing(owner)
-                    replaced_expr = g  # the result is likely just a number
+                    # Explicitly handle the case where g is not a JuMP expression
+                    if g isa Number
+                        replaced_expr = g
+                    else
+                        error("replace: Unable to convert simplified expression to a number or JuMP expression. Got: $(typeof(g))")
+                    end
                 else
                     # update owner model
                     replaced_expr = jump_function(owner, g)
