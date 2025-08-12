@@ -615,3 +615,9 @@ end
 
     @test length(payoff_improvements) <= length(Σ)
 end
+
+@testitem "Example qIPG" begin
+    include("../examples/quad_game.jl")
+
+    @test length(payoff_improvements) <= length(Σ)
+end
