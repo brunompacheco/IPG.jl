@@ -2,24 +2,53 @@ using JuMP, JSON3
 
 const VarToParamDict = Dict{VariableRef,VariableRef}
 
+global __player_counter = 0;
+
+function _get_player_name(::Nothing)::String
+    global __player_counter
+    return "Player $(__player_counter)"
+end
+_get_player_name(name) = String(name)
+
 "A player in an IPG."
 mutable struct Player
     "Strategy space."
     X::Model
-    # TODO: using value(...) to manipulate expressions does not work for NonlinearExpr, see https://github.com/jump-dev/JuMP.jl/issues/4044 for an appropriate solution (another huge refactor))
     "Payoff expression."
     Π::AbstractJuMPScalar
     _param_dict::VarToParamDict
+    "Human-friendly name for printing."
+    name::String
+    function Player(X::Model, Π::AbstractJuMPScalar, _param_dict::VarToParamDict; name=nothing)
+        # TODO: maybe add here a recursive scan of Π to check that all VariableRef are owned by X
+        global __player_counter += 1
+        return new(X, Π, _param_dict, _get_player_name(name))
+    end
 end
-Player() = Player(Model(), AffExpr(NaN), VarToParamDict())
-Player() = Player(Model(), AffExpr(0.0), VarToParamDict())
-Player(X::Model) = Player(X, AffExpr(0.0), VarToParamDict())
-function Player(X::Model, Π::AbstractJuMPScalar) 
-    player = Player(X)
+Player(; name=nothing) = Player(Model(), AffExpr(0.0), VarToParamDict(); name=name)
+Player(X::Model; name=nothing) = Player(X, AffExpr(0.0), VarToParamDict(); name=name)
+function Player(X::Model, Π::AbstractJuMPScalar; name=nothing)
+    player = Player(X; name=name)
     set_payoff!(player, Π)
     return player
 end
 export Player
+
+"Set the display name of a player."
+function set_name!(player::Player, name)
+    player.name = String(name)
+end
+export set_name!
+
+"Default show prints only the player's name."
+function Base.show(io::IO, player::Player)
+    print(io, player.name)
+end
+
+"Pretty (text/plain) show also prints only the name."
+function Base.show(io::IO, ::MIME"text/plain", player::Player)
+    print(io, player.name)
+end
 
 JuMP.all_variables(p::Player) = filter(v -> !is_parameter(v), all_variables(p.X))
 
