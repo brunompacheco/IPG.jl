@@ -65,7 +65,7 @@ julia> Σ[end]
  DiscreteMixedStrategy([1.0], [[1.25]])
 
 ```
-Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
+Further details in [`example_5_3.jl`](examples/example_5_3.jl).
 
 <!-- ## Two-player games
 
@@ -104,7 +104,7 @@ julia> Σ[end]
 
 Many components of the algorithm can be modified, as is already discussed in the original work (Table 1 and Section 6.2, Carvalho, Lodi, and Pedroso, 2020). To choose between different options, you have only to assign different implementations to the baseline pointer. Note that those different implementations can be custom, local functions as well.
 
-A practical example is shown in notebook [`example-5.3.ipynb`](./example-5.3.ipynb), at section _Customization_. Below, we detail the customizable parts and the available options.
+A practical example is shown in [`example_5_3.jl`](./examples/example_5_3.jl), at section _Customization_. Below, we detail the customizable parts and the available options.
 
 ### Initialization
 

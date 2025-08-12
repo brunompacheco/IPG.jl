@@ -487,7 +487,7 @@ end
     @test expected_value(identity, σ_PNS[players[2]]) == expected_value(identity, σ_Sandholm[players[2]]) == [1.0]
 end
 
-@testitem "Example 5.3" setup=[Utilities] begin
+@testitem "simple two-player bilateral game (example 5.3)" setup=[Utilities] begin
     # guarantee reproducibility (always start with player 1)
     IPG.get_player_order = IPG.get_player_order_fixed_descending
 
@@ -598,4 +598,12 @@ end
     # Verify the final strategies match the expected values
     @test Σ[end][P1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
     @test Σ[end][P2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
+end
+
+@testitem "Example 5.3" begin
+    include("../examples/example_5_3.jl")
+
+    # TODO: this is currently our only (easy) way to check that an equilibrium was found.
+    # And I'm not even sure that this is 100% reliable.
+    @test length(payoff_improvements) == length(Σ) - 1
 end
