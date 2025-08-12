@@ -1,6 +1,8 @@
 
 empty_S_X(players::Vector{Player}) = Dict{Player, Vector{PureStrategy}}(p => Vector{PureStrategy}() for p in players)
 
+# TODO: refactor strategies to apply to a single player at a time. leave the overwriting of start values outside?
+
 "Solves a feasibility problem for each player individually."
 function initialize_strategies_feasibility(players::Vector{Player})
     S_X = empty_S_X(players)
@@ -39,4 +41,19 @@ function initialize_strategies_player_alone(players::Vector{Player})
     return S_X
 end
 
+"""Define how initial strategies are computed for each player.
+
+In all current options, initialization is only applied to players that do *not* have start
+value for *all* variables, i.e., whenever `all(has_start_value.(all_variables(player))) == false`.
+
+Current options:
+ - `initialize_strategies_feasibility` (default)
+ - `initialize_strategies_player_alone`
+
+Example usage:
+```
+> IPG.initialize_strategies = IPG.initialize_strategies_feasibility
+```
+"""
 initialize_strategies = initialize_strategies_feasibility
+public initialize_strategies, initialize_strategies_player_alone, initialize_strategies_feasibility
