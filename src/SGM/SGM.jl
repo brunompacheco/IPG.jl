@@ -6,7 +6,28 @@ include("DeviationReaction.jl")
 include("Initialization.jl")
 
 
-function SGM(players::Vector{Player}, optimizer_factory; max_iter=100, dev_tol=1e-3, verbose=false)
+"""
+    SGM(players, optimizer_factory, max_iter=100, dev_tol=1e-3, verbose=false)
+
+Implementation of the _sampled generation method_ (SGM) for simultaneous games.
+
+See
+- [*M. Carvalho, A. Lodi, J. P. Pedroso, "Computing equilibria for integer programming games". 2022. European Journal of Operational Research*](https://www.sciencedirect.com/science/article/pii/S0377221722002727)
+- [*M. Carvalho, A. Lodi, J. P. Pedroso, "Computing Nash equilibria for integer programming games". 2020. arXiv:2012.07082*](https://arxiv.org/abs/2012.07082)
+for further details on the algorithm.
+
+# Arguments
+ - `players::Vector{Player}`: players in the simultaneous game.
+ - `optimizer_factory`: JuMP-suitable optimizer used to solve the sampled games. Also used in case the player's optimizer is not set.
+ - `max_iter::UInt`: maximum number of iterations.
+ - `dev_tol::Float64`: tolerance for deviation detection. If a deviation is found with a payoff improvement less than this value, the algorithm stops.
+ - `verbose::Bool`: whether to print information about the algorithm progress.
+
+# Examples
+See the [examples folder](IPG.jl/examples/).
+"""
+function SGM(players::Vector{Player}, optimizer_factory;
+             max_iter::UInt=100, dev_tol::Float64=1e-3, verbose::Bool=false)
     # set `optimizer_factory` the optimizer for each player that doesn't have one yet
     for player in players
         # check whether an optimizer has already been set to player
