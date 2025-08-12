@@ -204,11 +204,12 @@ player_B = Player(; name="Player B")
 @constraint(player_B.X, sum(f[i,r] .* x2[i,r] for i in I for r in R) <= B)
 @constraint(player_B.X, [i in I], sum(x2[i,r] for r in R) <= 1)
 
+const ε = 1e-3  # small value to prevent division by zero
 function cfld_payoff(x_self, x_other)
     self_costs = [sum(u[i,j,r] * x_self[i,r] for i in I for r in R) for j in J]
     others_costs = [sum(u[i,j,r] * x_other[i,r] for i in I for r in R) for j in J]
     return sum(
-        w[j] * self_costs[j] / (self_costs[j] + others_costs[j] + 1e-3)
+        w[j] * self_costs[j] / (self_costs[j] + others_costs[j] + ε)
         for j in J
     )
 end
