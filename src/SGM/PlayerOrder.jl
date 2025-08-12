@@ -62,21 +62,22 @@ end
 
 # TODO: instead of having a player order, just reorder the list of players
 
-"""Define the order followed by `IPG.find_deviation`.
+"""
+Define the order followed by `IPG.find_deviation`.
 
 The functions take as arguments the players, current iteration, past candidate equilibria,
 and past payoff improvements.
 
-Current options:
+# Options
  - `get_player_order_by_last_deviation` (default)
  - `get_player_order_fixed`
  - `get_player_order_fixed_ascending`
  - `get_player_order_fixed_descending`
  - `get_player_order_random`
 
-Example usage:
-```
-> IPG.get_player_order = IPG.get_player_order_by_last_deviation
+# Examples
+```julia
+IPG.get_player_order = IPG.get_player_order_by_last_deviation
 ```
 """
 get_player_order = get_player_order_by_last_deviation  # default value

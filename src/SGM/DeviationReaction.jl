@@ -18,14 +18,15 @@ function find_deviation_best_response(players::Vector{Player}, σ::Profile{Discr
     return 0.0, nothing, nothing
 end
 
-"""Find a deviation from a candidate equilibria `σ` (mixed profile).
+"""
+Find a deviation from a candidate equilibria `σ` (mixed profile).
 
-Current options:
+# Options
  - `find_deviation_best_response` (default)
 
-Example usage:
-```
-> IPG.find_deviation = IPG.find_deviation_best_response
+# Examples
+```julia
+IPG.find_deviation = IPG.find_deviation_best_response
 ```
 """
 find_deviation = find_deviation_best_response  # default value
