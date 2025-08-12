@@ -23,10 +23,17 @@ function generate_random_instance(n::Int, m::Int, lower_bnd::Int, upper_bnd::Int
 
     # Generate positive semidefinite matrix M
     M = zeros(Float64, (n*m, n*m))
-    while ~isposdef(M)
+
+    max_iter = 1000
+    iter = 0
+    while ~isposdef(M) && iter < max_iter
         M = rand(Float64, (n*m, n*m))
         M = (M .* 2 .- 1) .* RQ  # scaling
         M = M * M'
+        iter += 1
+    end
+    if ~isposdef(M)
+        error("Failed to generate a positive definite matrix after $max_iter iterations.")
     end
 
     M_max = maximum(M)

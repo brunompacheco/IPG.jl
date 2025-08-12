@@ -1,12 +1,12 @@
 using JuMP, JSON3
 
+using Base.Threads: Atomic, atomic_add!
+
 const VarToParamDict = Dict{VariableRef,VariableRef}
 
-global __player_counter = 0;
-
+const __player_counter = Atomic{Int}(0)
 function _get_player_name(::Nothing)::String
-    global __player_counter
-    return "Player $(__player_counter)"
+    return "Player $(__player_counter[]))"
 end
 _get_player_name(name) = String(name)
 
@@ -21,7 +21,7 @@ mutable struct Player
     name::String
     function Player(X::Model, Π::AbstractJuMPScalar, _param_dict::VarToParamDict; name=nothing)
         # TODO: maybe add here a recursive scan of Π to check that all VariableRef are owned by X
-        global __player_counter += 1
+        atomic_add!(__player_counter, 1)
         return new(X, Π, _param_dict, _get_player_name(name))
     end
 end
