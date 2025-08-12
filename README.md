@@ -1,4 +1,5 @@
 [![Tests badge](https://github.com/brunompacheco/IPG.jl/actions/workflows/tests.yml/badge.svg)](https://github.com/brunompacheco/IPG.jl/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/brunompacheco/IPG.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/brunompacheco/IPG.jl)
 
 # Integer Programming Games
 
