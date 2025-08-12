@@ -42,7 +42,7 @@ function initialize_strategies_player_alone(players::Vector{Player})
 end
 
 """
-Define how initial strategies are computed for each player.
+SGM subroutine that computes initial strategies for each player.
 
 In all current options, initialization is only applied to players that do *not* have start
 value for *all* variables, i.e., whenever `all(has_start_value.(all_variables(player))) == false`.

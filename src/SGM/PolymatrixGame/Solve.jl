@@ -65,7 +65,9 @@ function solve_Sandholm1(sampled_game::PolymatrixSampledGame, optimizer_factory)
 end
 
 """
-Interface for the solution methods in `NormalGames.jl` for polymatrix sampled games.
+SGM subroutine for solving polymatrix sampled games.
+
+The current implementations are interfaces for the solution methods in `NormalGames.jl`.
 
 # Options
  - `solve_PNS` (default)

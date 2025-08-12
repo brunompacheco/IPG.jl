@@ -19,7 +19,7 @@ function find_deviation_best_response(players::Vector{Player}, σ::Profile{Discr
 end
 
 """
-Find a deviation from a candidate equilibria `σ` (mixed profile).
+SGM subroutine that computes a deviation from a candidate equilibria `σ` (mixed profile).
 
 # Options
  - `find_deviation_best_response` (default)

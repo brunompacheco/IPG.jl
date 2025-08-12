@@ -63,7 +63,7 @@ end
 # TODO: instead of having a player order, just reorder the list of players
 
 """
-Define the order followed by `IPG.find_deviation`.
+SGM subroutine that defines the order followed by `IPG.find_deviation`.
 
 The functions take as arguments the players, current iteration, past candidate equilibria,
 and past payoff improvements.
