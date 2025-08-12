@@ -27,7 +27,7 @@ for further details on the algorithm.
 See the [examples folder](IPG.jl/examples/).
 """
 function SGM(players::Vector{Player}, optimizer_factory;
-             max_iter::UInt=100, dev_tol::Float64=1e-3, verbose::Bool=false)
+             max_iter::Integer=100, dev_tol::Float64=1e-3, verbose::Bool=false)
     # set `optimizer_factory` the optimizer for each player that doesn't have one yet
     for player in players
         # check whether an optimizer has already been set to player
