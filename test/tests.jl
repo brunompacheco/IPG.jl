@@ -600,10 +600,18 @@ end
     @test Σ[end][P2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
 end
 
+# The following tests on the examples/ should mostly guarantee that they run without errors.
+
 @testitem "Example 5.3" begin
     include("../examples/example_5_3.jl")
 
     # TODO: this is currently our only (easy) way to check that an equilibrium was found.
     # And I'm not even sure that this is 100% reliable.
     @test length(payoff_improvements) == length(Σ) - 1
+end
+
+@testitem "Example CFLD" begin
+    include("../examples/cfld.jl")
+
+    @test length(payoff_improvements) <= length(Σ)
 end
