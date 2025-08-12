@@ -487,13 +487,13 @@ end
     @test expected_value(identity, σ_PNS[players[2]]) == expected_value(identity, σ_Sandholm[players[2]]) == [1.0]
 end
 
-@testitem "Example 5.3" setup=[Utilities] begin
+@testitem "simple two-player bilateral game (example 5.3)" setup=[Utilities] begin
     # guarantee reproducibility (always start with player 1)
     IPG.get_player_order = IPG.get_player_order_fixed_descending
 
     players = get_example_two_player_game()
 
-    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
+    Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
 
     @test [σ[players[1]].supp for σ in Σ] ≈ [
         [[10.0]],
@@ -543,7 +543,7 @@ end
         Player(X2, NonlinearExpr(:+, Any[player_payoff(x2, x1)])),
     ]
 
-    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
+    Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
 
     @test [σ[players[1]].supp for σ in Σ] ≈ [
         [[10.0]],
@@ -593,44 +593,31 @@ end
     set_payoff!(P2, -x2*x2 + x1*x2)
     @test string(P2.Π) == string(-x2*x2 + x1*x2)
 
-    Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5)
+    Σ, payoff_improvements = SGM([P1, P2], SCIP.Optimizer, max_iter=5)
 
     # Verify the final strategies match the expected values
     @test Σ[end][P1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
     @test Σ[end][P2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
 end
 
-# @testitem "Player serialization" begin
-#     X1 = Model()
-#     @variable(X1, x1, start=10.0)
-#     @constraint(X1, x1 >= 0)
+# The following tests on the examples/ should mostly guarantee that they run without errors.
 
-#     player = Player(X1, QuadraticPayoff(0, [2, 1], 1), 1)
+@testitem "Example 5.3" begin
+    include("../examples/example_5_3.jl")
 
-#     filename = "test_player.json"
-#     IPG.save(player, filename)
-#     loaded_player = IPG.load(filename)
+    # TODO: this is currently our only (easy) way to check that an equilibrium was found.
+    # And I'm not even sure that this is 100% reliable.
+    @test length(payoff_improvements) == length(Σ) - 1
+end
 
-#     @test loaded_player.p == player.p
-#     @test loaded_player.Π.cp == player.Π.cp
-#     @test loaded_player.Π.Qp == player.Π.Qp
+@testitem "Example CFLD" begin
+    include("../examples/cfld.jl")
 
-#     # test strategy space
-#     X1 = player.X
-#     loaded_X1 = loaded_player.X
+    @test length(payoff_improvements) <= length(Σ)
+end
 
-#     set_optimizer(X1, SCIP.Optimizer)
-#     set_optimizer(loaded_X1, SCIP.Optimizer)
+@testitem "Example qIPG" begin
+    include("../examples/quad_game.jl")
 
-#     set_silent(X1)
-#     optimize!(X1)
-
-#     set_silent(loaded_X1)
-#     optimize!(loaded_X1)
-
-#     @test value.(all_variables(X1)) == value.(all_variables(loaded_X1))
-#     @test objective_value(X1) == objective_value(loaded_X1)
-
-#     # cleanup
-#     rm(filename)
-# end
+    @test length(payoff_improvements) <= length(Σ)
+end

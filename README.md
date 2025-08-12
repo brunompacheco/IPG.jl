@@ -19,16 +19,17 @@ using IPG
 
 p1 = Player(); ... ; pn = Player()
 
-# variable examples
+# variable definition
 @variable(p1.X, x1[1:5], Int)
 @variable(p1.X, y1 >= 0)
 
 @constraint(p1.X, ...)  # add your constraints
 
-# do so for players 2..n
+...  # the same for players 2..n
 
 # set payoff function
 set_payoff!(p1, c' * x1 + 0.5 * x1' * x2)
+...
 ```
 
 ## Payoff Functions
@@ -57,7 +58,7 @@ julia> set_payoff!(P1, -x1*x1 + x1*x2)
 
 julia> set_payoff!(P2, -x2*x2 + x1*x2);
 
-julia> Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5);
+julia> Σ, payoff_improvements = SGM([P1, P2], SCIP.Optimizer, max_iter=5);
 
 julia> Σ[end]
 2-element Vector{DiscreteMixedStrategy}:
@@ -65,7 +66,7 @@ julia> Σ[end]
  DiscreteMixedStrategy([1.0], [[1.25]])
 
 ```
-Further details in [`example-5.3.ipynb`](notebooks/example-5.3.ipynb).
+Further details in [`example_5_3.jl`](examples/example_5_3.jl). In fact, check out [`examples/`](examples/).
 
 <!-- ## Two-player games
 
@@ -91,7 +92,7 @@ julia> @variable(players[1].X, x1, start=10); @constraint(players[1].X, x1 >= 0)
 
 julia> @variable(players[2].X, x2, start=10); @constraint(players[2].X, x2 >= 0);
 
-julia> Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
+julia> Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=5);
 
 julia> Σ[end]
 2-element Vector{DiscreteMixedStrategy}:
@@ -104,7 +105,7 @@ julia> Σ[end]
 
 Many components of the algorithm can be modified, as is already discussed in the original work (Table 1 and Section 6.2, Carvalho, Lodi, and Pedroso, 2020). To choose between different options, you have only to assign different implementations to the baseline pointer. Note that those different implementations can be custom, local functions as well.
 
-A practical example is shown in notebook [`example-5.3.ipynb`](./example-5.3.ipynb), at section _Customization_. Below, we detail the customizable parts and the available options.
+A practical example is shown in [`example_5_3.jl`](./examples/example_5_3.jl), at section _Customization_. Below, we detail the customizable parts and the available options.
 
 ### Initialization
 
@@ -128,6 +129,6 @@ A deviation from the candidate equilibrium is found by computing a player's best
 
 ### MIP Solver
 
-MIP solvers are used (in the default methods) for the initialization of strategies and for computing a deviation (best response, by default) from the candidate equilibrium. Any JuMP-supported MIP solver that can handle the players' problem can be used in SGM. For example, it may be that your players have quadratic constraints, so you will need a MIQCP solver. Your call will look like `IGP.SGM(my_players, MySolver.Optimizer)`.
+MIP solvers are used (in the default methods) for the initialization of strategies and for computing a deviation (best response, by default) from the candidate equilibrium. Any JuMP-supported MIP solver that can handle the players' problem can be used in SGM. For example, it may be that your players have quadratic constraints, so you will need a MIQCP solver. Your call will look like `SGM(my_players, MySolver.Optimizer)`.
 
 The algorithm also supports using a different solver for each player. You just need to initialize each player's strategy space with that optimizer factory or use JuMP's method, e.g., `set_optimizer(player, MySolver.Optimizer)`. It is important to note that the `optimizer_factory` that is provided to SGM will _not_ overwrite any player's optimizer. It will be set as the player's optimizer only if no optimizer has been set.
