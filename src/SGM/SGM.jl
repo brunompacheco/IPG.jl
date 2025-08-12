@@ -65,3 +65,4 @@ function SGM(players::Vector{Player}, optimizer_factory; max_iter=100, dev_tol=1
     # TODO: add verbose option to return all intermediate σ
     return Σ_S, payoff_improvements
 end
+export SGM

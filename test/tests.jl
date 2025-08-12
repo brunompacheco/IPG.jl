@@ -493,7 +493,7 @@ end
 
     players = get_example_two_player_game()
 
-    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
+    Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
 
     @test [σ[players[1]].supp for σ in Σ] ≈ [
         [[10.0]],
@@ -543,7 +543,7 @@ end
         Player(X2, NonlinearExpr(:+, Any[player_payoff(x2, x1)])),
     ]
 
-    Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
+    Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=5, verbose=true);
 
     @test [σ[players[1]].supp for σ in Σ] ≈ [
         [[10.0]],
@@ -593,7 +593,7 @@ end
     set_payoff!(P2, -x2*x2 + x1*x2)
     @test string(P2.Π) == string(-x2*x2 + x1*x2)
 
-    Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5)
+    Σ, payoff_improvements = SGM([P1, P2], SCIP.Optimizer, max_iter=5)
 
     # Verify the final strategies match the expected values
     @test Σ[end][P1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])

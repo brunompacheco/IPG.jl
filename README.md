@@ -57,7 +57,7 @@ julia> set_payoff!(P1, -x1*x1 + x1*x2)
 
 julia> set_payoff!(P2, -x2*x2 + x1*x2);
 
-julia> Σ, payoff_improvements = IPG.SGM([P1, P2], SCIP.Optimizer, max_iter=5);
+julia> Σ, payoff_improvements = SGM([P1, P2], SCIP.Optimizer, max_iter=5);
 
 julia> Σ[end]
 2-element Vector{DiscreteMixedStrategy}:
@@ -91,7 +91,7 @@ julia> @variable(players[1].X, x1, start=10); @constraint(players[1].X, x1 >= 0)
 
 julia> @variable(players[2].X, x2, start=10); @constraint(players[2].X, x2 >= 0);
 
-julia> Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=5);
+julia> Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=5);
 
 julia> Σ[end]
 2-element Vector{DiscreteMixedStrategy}:

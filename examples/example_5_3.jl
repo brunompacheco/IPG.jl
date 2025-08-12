@@ -31,4 +31,4 @@ IPG.get_player_order = get_player_random_order
 
 # ==== SGM ====
 players = [player1, player2]
-Σ, payoff_improvements = IPG.SGM(players, SCIP.Optimizer, max_iter=100, verbose=true);
+Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=100, verbose=true);
