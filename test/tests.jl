@@ -599,38 +599,3 @@ end
     @test Σ[end][P1] ≈ DiscreteMixedStrategy([1.0], [[0.625]])
     @test Σ[end][P2] ≈ DiscreteMixedStrategy([1.0], [[1.25]])
 end
-
-# @testitem "Player serialization" begin
-#     X1 = Model()
-#     @variable(X1, x1, start=10.0)
-#     @constraint(X1, x1 >= 0)
-
-#     player = Player(X1, QuadraticPayoff(0, [2, 1], 1), 1)
-
-#     filename = "test_player.json"
-#     IPG.save(player, filename)
-#     loaded_player = IPG.load(filename)
-
-#     @test loaded_player.p == player.p
-#     @test loaded_player.Π.cp == player.Π.cp
-#     @test loaded_player.Π.Qp == player.Π.Qp
-
-#     # test strategy space
-#     X1 = player.X
-#     loaded_X1 = loaded_player.X
-
-#     set_optimizer(X1, SCIP.Optimizer)
-#     set_optimizer(loaded_X1, SCIP.Optimizer)
-
-#     set_silent(X1)
-#     optimize!(X1)
-
-#     set_silent(loaded_X1)
-#     optimize!(loaded_X1)
-
-#     @test value.(all_variables(X1)) == value.(all_variables(loaded_X1))
-#     @test objective_value(X1) == objective_value(loaded_X1)
-
-#     # cleanup
-#     rm(filename)
-# end
