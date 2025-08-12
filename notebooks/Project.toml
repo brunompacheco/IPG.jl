@@ -1,9 +1,0 @@
-[deps]
-IPG = "2f50017d-522a-4a0a-b317-915d5df6b243"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-SCIP = "82193955-e24f-5292-bf16-6f2c5261a85f"
-NormalGames = "4dc104ef-1e0c-4a09-93ea-14ddc8e86204"
-
-[sources]
-IPG = {path = ".."}
-NormalGames = {url = "https://github.com/mxmmargarida/Normal-form-games", rev = "optimizer-agnosticism"}

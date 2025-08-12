@@ -1,0 +1,12 @@
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+ExcelFiles = "89b67f3b-d1aa-5f6f-9ca4-282e8d98620d"
+IPG = "2f50017d-522a-4a0a-b317-915d5df6b243"
+NormalGames = "4dc104ef-1e0c-4a09-93ea-14ddc8e86204"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+SCIP = "82193955-e24f-5292-bf16-6f2c5261a85f"
+StringEncodings = "69024149-9ee7-55f6-a4c4-859efe599b68"
+
+[sources]
+IPG = {path = ".."}
+NormalGames = {rev = "optimizer-agnosticism", url = "https://github.com/mxmmargarida/Normal-form-games"}
