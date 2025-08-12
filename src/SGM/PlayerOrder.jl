@@ -1,4 +1,6 @@
 
+using Random
+
 const PayoffImprovements = Vector{Tuple{Player, Float64}}
 const CandidateEquilibria = Vector{Profile{DiscreteMixedStrategy}}
 
