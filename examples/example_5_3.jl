@@ -9,6 +9,7 @@ For futher details, see:
 Notes
 - SCIP can be replaced with other solvers, such as Gurobi or CPLEX.
 """
+
 using IPG, SCIP
 
 # ==== Player Definition ====
