@@ -2,8 +2,9 @@
 include("Polymatrix.jl")
 
 "Normal-form polymatrix representation of the sampled game."
-mutable struct PolymatrixSampledGame
-    S_X::Dict{Player, Vector{PureStrategy}}  # sample of strategies (finite subset of the strategy space X)
+mutable struct PolymatrixSampledGame <: AbstractSampledGame
+    "Sample of strategies (finite subset of the strategy space X)."
+    S_X::Dict{Player, Vector{PureStrategy}}
     polymatrix::Polymatrix
 end
 

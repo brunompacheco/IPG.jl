@@ -1,6 +1,5 @@
 
-# include("SampledGame/SampledGame.jl")  # TODO: refactor polymatrix out of sampled game. SampledGame now is a simple const
-include("PolymatrixGame/PolymatrixGame.jl")
+include("SampledGame.jl")
 include("PlayerOrder.jl")
 include("DeviationReaction.jl")
 include("Initialization.jl")
