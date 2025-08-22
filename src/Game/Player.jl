@@ -169,3 +169,9 @@ end
 
 #     return Player{QuadraticPayoff}(Xp, QuadraticPayoff(cp, Qp, payoff_index), player_index)
 # end
+
+# Utils
+
+function others(dict::Dict{Player, T}, player::Player)::Dict{Player,T} where T
+    return Dict{Player, T}(p => dict[p] for p in keys(dict) if p != player)
+end

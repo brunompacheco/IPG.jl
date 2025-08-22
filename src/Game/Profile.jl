@@ -16,7 +16,3 @@ function expected_value(f::Function, σ::Profile{DiscreteMixedStrategy})
 
     return expectation
 end
-
-function others(profile::Profile{T}, player::Player) where T <: Strategy
-    return Profile{T}(p => profile[p] for p in keys(profile) if p != player)
-end
