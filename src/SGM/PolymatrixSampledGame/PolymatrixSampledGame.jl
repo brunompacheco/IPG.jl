@@ -8,7 +8,7 @@ mutable struct PolymatrixSampledGame <: AbstractSampledGame
     polymatrix::Polymatrix
 end
 
-# TODO: since S_X is a Dict{Player, ...}, we don't need to pass the players anymore
+# TODO: since S_X is a Dict{Player, ...}, we don't need to pass the players anymore. However, we would need to use an OrderedDict!
 function PolymatrixSampledGame(players::Vector{Player}, S_X::Sample{PureStrategy})
     return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
 end
