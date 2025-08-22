@@ -1,10 +1,10 @@
 
-empty_S_X(players::Vector{Player}) = Dict{Player, Vector{PureStrategy}}(p => Vector{PureStrategy}() for p in players)
+empty_S_X(players::Vector{Player}) = Sample{PureStrategy}(p => Vector{PureStrategy}() for p in players)
 
 # TODO: refactor strategies to apply to a single player at a time. leave the overwriting of start values outside?
 
 "Solves a feasibility problem for each player individually."
-function initialize_strategies_feasibility(players::Vector{Player})
+function initialize_strategies_feasibility(players::Vector{Player})::Sample{PureStrategy}
     S_X = empty_S_X(players)
     for player in players
         xp_init = start_value.(all_variables(player))
@@ -22,7 +22,7 @@ function initialize_strategies_feasibility(players::Vector{Player})
 end
 
 "Computes the best response of each player when others play 0."
-function initialize_strategies_player_alone(players::Vector{Player})
+function initialize_strategies_player_alone(players::Vector{Player})::Sample{PureStrategy}
     S_X = empty_S_X(players)
 
     # profile that simulates players being alone (all others play 0)

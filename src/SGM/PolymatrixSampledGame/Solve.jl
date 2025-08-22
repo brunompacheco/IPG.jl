@@ -9,7 +9,7 @@ function polymatrix_to_NG_std(polymatrix::Polymatrix, players::Vector{Player})::
     )
 end
 
-function discrete_profile_from_NE(NE_mixed::Vector{Vector{Float64}}, S_X::Dict{Player, Vector{PureStrategy}})::Profile{DiscreteMixedStrategy}
+function discrete_profile_from_NE(NE_mixed::Vector{Vector{Float64}}, S_X::Sample{PureStrategy})::Profile{DiscreteMixedStrategy}
     players = collect(keys(S_X))
     NE_probs = Dict(p => probs for (p, probs) in zip(players, NE_mixed))
 

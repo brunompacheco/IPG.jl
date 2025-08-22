@@ -60,7 +60,7 @@ function compute_bilateral_payoff(p::Player, x_p::PureStrategy, k::Player, x_k::
 end
 
 "Compute polymatrix for normal form game from sample of strategies."
-function get_polymatrix(players::Vector{Player}, S_X::Dict{Player, Vector{PureStrategy}})::Polymatrix
+function get_polymatrix(players::Vector{Player}, S_X::Sample{PureStrategy})::Polymatrix
     if length(players) == 2
         # if there are only two players, we can handle generic payoffs
         return get_polymatrix_twoplayers(players[1], players[2], S_X)
@@ -70,7 +70,7 @@ function get_polymatrix(players::Vector{Player}, S_X::Dict{Player, Vector{PureSt
     end
 end
 
-function get_polymatrix_bilateral(players::Vector{Player}, S_X::Dict{Player, Vector{PureStrategy}})::Polymatrix
+function get_polymatrix_bilateral(players::Vector{Player}, S_X::Sample{PureStrategy})::Polymatrix
     # TODO: we could have the payoff type as a Player parameter, so that we can filter that out straight away
     polymatrix = Polymatrix()
 
@@ -97,7 +97,7 @@ function get_polymatrix_bilateral(players::Vector{Player}, S_X::Dict{Player, Vec
 end
 
 "Compute polymatrix between players `p` and `k` in a two-player game."
-function get_polymatrix_twoplayers(p::Player, k::Player, S_X::Dict{Player, Vector{PureStrategy}})::Polymatrix
+function get_polymatrix_twoplayers(p::Player, k::Player, S_X::Sample{PureStrategy})::Polymatrix
     # initialization
     polymatrix = Polymatrix()
 
@@ -119,9 +119,9 @@ function get_polymatrix_twoplayers(p::Player, k::Player, S_X::Dict{Player, Vecto
 end
 
 "We expect the new strategies to always be the last ones in S_X[p]."
-function update_polymatrix!(polymatrix::Polymatrix, p::Player, S_X::Dict{Player, Vector{PureStrategy}})
+function update_polymatrix!(polymatrix::Polymatrix, p::Player, S_X::Sample{PureStrategy})
     other_players = collect(filter(k -> k != p, keys(S_X)))
-    sub_S_X = Dict{Player, Vector{PureStrategy}}(k => S_X[k] for k in other_players)
+    sub_S_X = Sample{PureStrategy}(k => S_X[k] for k in other_players)
     n_old_p_strats = size(polymatrix[p,other_players[1]],1)
     sub_S_X[p] = S_X[p][(n_old_p_strats+1):end]  # only the new strategies
 
