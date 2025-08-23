@@ -1,7 +1,9 @@
 
 # TODO: the following is a great example for why Sample{T} has to be an OrderedDict if we
 # want to stop passing players to this type of function
-function get_utilities(players::Vector{Player}, S_X::Sample{PureStrategy})::Array{Float64}
+function get_utilities(S_X::Sample{PureStrategy})::Array{Float64}
+    players = collect(keys(S_X))
+
     n_strategies = [length(S_X[p]) for p in players]
     utilities = zeros(Float64, n_strategies..., length(players))
 
@@ -21,8 +23,10 @@ function get_utilities(players::Vector{Player}, S_X::Sample{PureStrategy})::Arra
 end
 
 "We expect the new strategies to always be the last ones in S_X."
-function update_utilities(utilities::Array{Float64}, players::Vector{Player}, S_X::Sample{PureStrategy})
-    for i in 1:length(players)
+function update_utilities(utilities::Array{Float64}, S_X::Sample{PureStrategy})
+    players = collect(keys(S_X))
+
+    for i in eachindex(players)
         n_old_p_strats = size(utilities, i)
         n_old_p_strats == length(S_X[players[i]]) && continue # no new strategies for this player
 
@@ -33,7 +37,7 @@ function update_utilities(utilities::Array{Float64}, players::Vector{Player}, S_
         sub_S_X = Sample{PureStrategy}(k => S_X[k] for k in others(players, i))
         sub_S_X[p] = S_X[p][(n_old_p_strats+1):end]  # ...and the new strategies of `p`
 
-        new_utilities = get_utilities(players, sub_S_X)
+        new_utilities = get_utilities(sub_S_X)
 
         utilities = cat(utilities, new_utilities; dims=i)
     end

@@ -7,6 +7,14 @@ mutable struct UtilitiesSampledGame <: AbstractSampledGame
     "Utilities of each player for each possible profile in the game."
     utilities::Array{Float64}  # n+1 dimensional: (s₁, ..., sₙ, n)
 end
-function UtilitiesSampledGame(players::Vector{Player}, S_X::Sample{PureStrategy})
-    return UtilitiesSampledGame(S_X, get_utilities(players, S_X))
+function UtilitiesSampledGame(S_X::Sample{PureStrategy})
+    return UtilitiesSampledGame(S_X, get_utilities(S_X))
+end
+
+function add_new_strategy!(sg::UtilitiesSampledGame, p::Player, new_xp::PureStrategy)
+    # first part is easy, just add the new strategy to the set
+    push!(sg.S_X[p], new_xp)
+
+    # TODO: this is not safe, as we need the players to be in the same order as in the utilities tensor
+    sg.utilities = update_utilities(sg.utilities, sg.S_X)
 end

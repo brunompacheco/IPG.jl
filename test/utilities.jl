@@ -4,9 +4,9 @@ include("utils.jl")
     p1, p2 = get_example_two_player_game()
 
     # give some options so that we can test the utility tensor
-    S_X = IPG.Sample{PureStrategy}(p1 => [[10.0],[5.0]], p2 => [[10.0],[5.0]])
+    S_X = Sample(p1 => [[10.0],[5.0]], p2 => [[10.0],[5.0]])
 
-    utilities = IPG.get_utilities([p1,p2], S_X)
+    utilities = IPG.get_utilities(S_X)
 
     println(size(utilities))
     expected_utilities = zeros(Float64, 2, 2, 2)  # 2 strategies for p1, 2 strategies for p2, 2 players
@@ -20,9 +20,9 @@ end
     p1, p2 = get_example_two_player_game()
 
     # give some options so that we can test the utility tensor
-    S_X = IPG.Sample{PureStrategy}(p1 => [[10.0],[5.0]], p2 => [[10.0]])
+    S_X = Sample(p1 => [[10.0],[5.0]], p2 => [[10.0]])
 
-    utilities = IPG.get_utilities([p1,p2], S_X)
+    utilities = IPG.get_utilities(S_X)
 
     expected_utilities = zeros(Float64, 2, 2, 2)  # 2 strategies for p1, 2 strategies for p2, 2 players
     expected_utilities[1,1,:] .= expected_utilities[2,2,:] .= 0.0
@@ -33,7 +33,7 @@ end
 
     push!(S_X[p2], [5.0])
 
-    utilities = IPG.update_utilities(utilities, [p1, p2], S_X)
+    utilities = IPG.update_utilities(utilities, S_X)
 
     @test utilities == expected_utilities
 end
