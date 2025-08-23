@@ -126,7 +126,7 @@ end
 "We expect the new strategies to always be the last ones in S_X[p]."
 function update_polymatrix!(polymatrix::Polymatrix, p::Player, S_X::Sample{PureStrategy})
     other_players = [k for k in collect(keys(S_X)) if k != p]
-    sub_S_X = Sample(k => S_X[k] for k in other_players)
+    sub_S_X = Sample{PureStrategy}(k => S_X[k] for k in other_players)
     n_old_p_strats = size(polymatrix[p,other_players[1]],1)
     sub_S_X[p] = S_X[p][(n_old_p_strats+1):end]  # only the new strategies
 

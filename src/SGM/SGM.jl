@@ -41,7 +41,7 @@ function SGM(players::Vector{Player}, optimizer_factory;
     # solved
 
     S_X = initialize_strategies(players)
-    sampled_game = PolymatrixSampledGame(players, S_X)
+    sampled_game = SampledGame(S_X)
     verbose && println("Game initialized with strategies: ", S_X)
 
     Σ_S = Vector{Profile{DiscreteMixedStrategy}}()  # candidate equilibria
