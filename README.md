@@ -34,7 +34,7 @@ set_payoff!(p1, c' * x1 + 0.5 * x1' * x2)
 
 ## Payoff Functions
 
-The payoff is defined as a JuMP expression. Thus far, any quadratic jump expression is supported. In the (near) future, we expect to support nonlinear expressions as well, which could be handled by the SGM for two-player games.
+The payoff is defined as a JuMP expression. Any expressions (including nonlinear!) are supported. They will, however, affect the choice for how the sampled games are generated and solved. See [Sampled game solution](#sampled-game-solution) for more details.
 
 ## Example
 
@@ -103,7 +103,7 @@ julia> Σ[end]
 
 ## Customization
 
-Many components of the algorithm can be modified, as is already discussed in the original work (Table 1 and Section 6.2, Carvalho, Lodi, and Pedroso, 2020). To choose between different options, you have only to assign different implementations to the baseline pointer. Note that those different implementations can be custom, local functions as well.
+Many components of the algorithm can be modified, as is already discussed in the original work (Table 1 and Section 6.2, Carvalho, Lodi, and Pedroso, 2020). To choose between different options, you have only to assign different implementations to the baseline pointer. Note that those different implementations can be user-defined local functions as well.
 
 A practical example is shown in [`example_5_3.jl`](./examples/example_5_3.jl), at section _Customization_. Below, we detail the customizable parts and the available options.
 
@@ -117,7 +117,13 @@ To change to this alternative approach, you just need to add `IPG.initialize_str
 
 ### Sampled game solution
 
-By default, we solve the sampled games using NormalGames.jl, which has not been published (yet). Ask for permission and follow the installation instructions at https://github.com/mxmmargarida/Normal-form-games. Any nash equilibria method can be used. By default, we have wrapped NormalGames' implentation of Porter, Nudelman and Shoham's method in [`solve_PNS`](src/SGM/PolymatrixGame/Solve.jl#L24). We also provide a wrapper for the Big-M formulation of Sandholm et al. (2005) in [`solve_Sandholm1`](src/SGM/PolymatrixGame/Solve.jl#L43). To choose the latter instead of the former, just assign it to `IPG.solve`.
+If the payoff is a quadratic expression, or the game has only two players, SGM uses polymatrix sampled games (from [NormalGames.jl](https://github.com/mxmmargarida/Normal-form-games)).
+By default, we have wrapped NormalGames' implentation of Porter, Nudelman and Shoham's method in [`solve_PNS`](src/SGM/PolymatrixGame/Solve.jl#L24). We also provide a wrapper for the Big-M formulation of Sandholm et al. (2005) in [`solve_Sandholm1`](src/SGM/PolymatrixGame/Solve.jl#L43). To choose the latter instead of the former, just assign it to `IPG.solve_polymatrix_game`.
+
+If the payoff is a nonlinear expression *and* the game has 3+ players, SGM will use a utility-based sampled game (from [MultiPlayer.jl](https://github.com/mxmmargarida/MultiPlayer)).
+We only implemented the default solver, which performs an algorithm selection based on problem characteristics.
+Refer to the linked repository for more details.
+To provide a custom implementation, assign it to `IPG.solve_utilities_game`.
 
 ### Player order
 
