@@ -10,6 +10,7 @@ function NGame(sg::UtilitiesSampledGame)::MultiGame.NGame
     )
 end
 
+"Compute a (mixed) nash equilibrium for the sampled game using MultiGame."
 function solve_multigame(sampled_game::UtilitiesSampledGame, optimizer_factory)::Profile{DiscreteMixedStrategy}
     game = NGame(sampled_game)
 
@@ -30,3 +31,19 @@ function solve_multigame(sampled_game::UtilitiesSampledGame, optimizer_factory):
         for (i, p) in enumerate(keys(sampled_game.S_X))
     )
 end
+
+"""
+SGM subroutine for solving utility-based sampled games.
+
+The current implementation is an interface for the solution methods in `MultiGame`.
+
+# Options
+ - `solve_multigame` (default)
+
+# Examples
+```julia
+IPG.solve_utilities_game = IPG.solve_multigame
+```
+"""
+solve_utilities_game = solve_multigame  # default value
+public solve_utilities_game, solve_multigame

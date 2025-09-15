@@ -64,7 +64,6 @@ function solve_Sandholm1(sampled_game::PolymatrixSampledGame, optimizer_factory)
     return discrete_profile_from_NE(NE_mixed, sampled_game.S_X)
 end
 
-# TODO: this has to be refactored. maybe `solve_polymatrix`, and then in SampledGame we select between solve_polymatrix and solve_utilities
 """
 SGM subroutine for solving polymatrix sampled games.
 
@@ -76,8 +75,8 @@ The current implementations are interfaces for the solution methods in `NormalGa
 
 # Examples
 ```julia
-IPG.solve = IPG.solve_PNS
+IPG.solve_polymatrix_game = IPG.solve_PNS
 ```
 """
-solve = solve_PNS  # default value
-public solve, solve_PNS, solve_Sandholm1
+solve_polymatrix_game = solve_PNS  # default value
+public solve_polymatrix_game, solve_PNS, solve_Sandholm1
