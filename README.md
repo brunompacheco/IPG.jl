@@ -103,6 +103,8 @@ julia> Σ[end]
 
 ## Customization
 
+**WARNING: the following is outdated. The current approach for customization uses dispatch.**
+
 Many components of the algorithm can be modified, as is already discussed in the original work (Table 1 and Section 6.2, Carvalho, Lodi, and Pedroso, 2020). To choose between different options, you have only to assign different implementations to the baseline pointer. Note that those different implementations can be custom, local functions as well.
 
 A practical example is shown in [`example_5_3.jl`](./examples/example_5_3.jl), at section _Customization_. Below, we detail the customizable parts and the available options.

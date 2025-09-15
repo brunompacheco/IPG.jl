@@ -12,7 +12,7 @@ include("utils.jl")
         set_start_value(var, nothing)
     end
 
-    S_X = IPG.initialize_strategies_feasibility(players)
+    S_X = IPG.initialize_strategies(FeasibilityStrategyInit(), players)
 
     @test Set(keys(S_X)) == Set(players)
     for player in players
@@ -29,7 +29,7 @@ include("utils.jl")
         set_start_value(var, nothing)
     end
 
-    S_X = IPG.initialize_strategies_player_alone(players)
+    S_X = IPG.initialize_strategies(PlayerAloneStrategyInit(), players)
 
     @test Set(keys(S_X)) == Set(players)
     for player in players
@@ -37,6 +37,45 @@ include("utils.jl")
         xp = S_X[player][1]
         @test length(xp) == length(all_variables(player))
         @test all(xp .== 0)  # known best response to 0
+    end
+end
+
+@testitem "Default initializer change" setup=[Utilities] begin
+    players = get_example_two_player_game()
+    for player in players
+        IPG.set_optimizer(player, SCIP.Optimizer)
+    end
+
+    # remove start values from both players
+    for player in players
+        for var in all_variables(player.X)
+            set_start_value(var, nothing)
+        end
+    end
+
+    # Store original default initializer
+    original_default = IPG.DEFAULT_STRATEGY_INITIALIZER
+
+    try
+        # Test default behavior (should be FeasibilityStrategyInit)
+        @test IPG.DEFAULT_STRATEGY_INITIALIZER isa FeasibilityStrategyInit
+        S_X_default = IPG.initialize_strategies(players)
+        
+        # Change default to PlayerAloneStrategyInit
+        IPG.DEFAULT_STRATEGY_INITIALIZER = PlayerAloneStrategyInit()
+        @test IPG.DEFAULT_STRATEGY_INITIALIZER isa PlayerAloneStrategyInit
+        
+        S_X_changed = IPG.initialize_strategies(players)
+        
+        # Results should be different - PlayerAloneStrategyInit gives all zeros
+        for player in players
+            @test all(S_X_changed[player][1] .== 0)  # PlayerAlone should give zeros
+            @test !(all(S_X_default[player][1] .== 0))  # Feasibility should not give all zeros
+        end
+        
+    finally
+        # Restore original default initializer
+        IPG.DEFAULT_STRATEGY_INITIALIZER = original_default
     end
 end
 
