@@ -18,3 +18,5 @@ function add_new_strategy!(sg::UtilitiesSampledGame, p::Player, new_xp::PureStra
     # TODO: this is not safe, as we need the players to be in the same order as in the utilities tensor
     sg.utilities = update_utilities(sg.utilities, sg.S_X)
 end
+
+include("Solve.jl")

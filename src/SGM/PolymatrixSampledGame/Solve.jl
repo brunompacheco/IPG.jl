@@ -64,6 +64,7 @@ function solve_Sandholm1(sampled_game::PolymatrixSampledGame, optimizer_factory)
     return discrete_profile_from_NE(NE_mixed, sampled_game.S_X)
 end
 
+# TODO: this has to be refactored. maybe `solve_polymatrix`, and then in SampledGame we select between solve_polymatrix and solve_utilities
 """
 SGM subroutine for solving polymatrix sampled games.
 
