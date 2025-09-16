@@ -66,34 +66,38 @@ function _maybe_create_parameter_for_external_var(player::Player, var::VariableR
     return player._param_dict[var]
 end
 
-function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
-    _recursive_internalize_expr(expr::Number) = expr
-    function _recursive_internalize_expr(expr::AbstractJuMPScalar)::AbstractJuMPScalar
-        if expr isa VariableRef
-            return _maybe_create_parameter_for_external_var(player, expr)
-        elseif expr isa AffExpr
-            internal_terms = typeof(expr.terms)(
+function internalize_expr(player::Player, expr::AbstractJuMPScalar)::AbstractJuMPScalar
+    _recursive_internalize_expr(e::Number) = e
+    function _recursive_internalize_expr(e::AbstractJuMPScalar)::AbstractJuMPScalar
+        if e isa VariableRef
+            return _maybe_create_parameter_for_external_var(player, e)
+        elseif e isa AffExpr
+            internal_terms = typeof(e.terms)(
                 _maybe_create_parameter_for_external_var(player, var) => coeff
-                for (var, coeff) in expr.terms
+                for (var, coeff) in e.terms
             )
-            return AffExpr(expr.constant, internal_terms)
-        elseif expr isa QuadExpr
-            internal_terms = typeof(expr.terms)(
+            return AffExpr(e.constant, internal_terms)
+        elseif e isa QuadExpr
+            internal_terms = typeof(e.terms)(
                 UnorderedPair{VariableRef}(
                     _maybe_create_parameter_for_external_var(player, vars.a),
                     _maybe_create_parameter_for_external_var(player, vars.b)
                 ) => coeff
-                for (vars, coeff) in expr.terms
+                for (vars, coeff) in e.terms
             )
-            return QuadExpr(_recursive_internalize_expr(expr.aff), internal_terms)
-        elseif expr isa NonlinearExpr
-            return NonlinearExpr(expr.head, Vector{Any}(map(_recursive_internalize_expr, expr.args)))
+            return QuadExpr(_recursive_internalize_expr(e.aff), internal_terms)
+        elseif e isa NonlinearExpr
+            return NonlinearExpr(e.head, Vector{Any}(map(_recursive_internalize_expr, e.args)))
         else
-            error("Unsupported expression type: $(typeof(expr))")
+            error("Unsupported expression type: $(typeof(e))")
         end
     end
 
-    player.Π = _recursive_internalize_expr(payoff)
+    return _recursive_internalize_expr(expr)
+end
+
+function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
+    player.Π = internalize_expr(player, payoff)
 end
 function set_payoff!(player::Player, payoff::Real)
     player.Π = AffExpr(payoff)
