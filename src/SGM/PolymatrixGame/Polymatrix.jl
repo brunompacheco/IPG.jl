@@ -50,14 +50,19 @@ function compute_bilateral_payoff(Π::QuadExpr, v_bar_p::AssignmentDict, v_bar_k
 
     return mixed_components + other_components + compute_others_payoff(Π.aff, v_bar_k)
 end
-compute_bilateral_payoff(Π::AffExpr, v_bar_p::AssignmentDict, v_bar_k::AssignmentDict)::Float64 = compute_bilateral_payoff(QuadExpr(Π), v_bar_p, v_bar_k)
+compute_bilateral_payoff(Π::AffExpr, v_bar_p::AssignmentDict, v_bar_k::AssignmentDict)::Float64 = compute_others_payoff(Π, v_bar_k)
 
 function compute_bilateral_payoff(p::Player, x_p::PureStrategy, k::Player, x_k::PureStrategy)
     # In fact, +1 for having Dict{VariableRef, Number} as the standard for assignments
     v_bar_p = Assignment(p, x_p)  # TODO: this could be cached.
     v_bar_k = _internalize_assignment(p, Assignment(k, x_k))
 
-    return compute_bilateral_payoff(p.Π, v_bar_p, v_bar_k)
+    if length(v_bar_k) == 0
+        # if there are no variables from player k in p's payoff, there's no influence
+        return 0.0
+    else
+        return compute_bilateral_payoff(p.Π, v_bar_p, v_bar_k)
+    end
 end
 
 "Compute polymatrix for normal form game from sample of strategies."
@@ -75,7 +80,8 @@ function get_polymatrix_bilateral(players::Vector{Player}, S_X::Dict{Player, Vec
     # TODO: we could have the payoff type as a Player parameter, so that we can filter that out straight away
     polymatrix = Polymatrix()
 
-    # compute utility of each player `p` using strategy `i_p` against player `k` using strategy `i_k`
+    # compute utility of each player `p` using the `i_p`-th strategy against player `k`
+    # using the `i_k`-th strategy
     for p in players
         for k in players
             polymatrix[p,k] = zeros(length(S_X[p]), length(S_X[k]))
