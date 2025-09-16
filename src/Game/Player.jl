@@ -93,7 +93,7 @@ function internalize_expr(player::Player, expr::AbstractJuMPScalar)::AbstractJuM
         end
     end
 
-    player.Π = _recursive_internalize_expr(expr)
+    return _recursive_internalize_expr(expr)
 end
 
 function set_payoff!(player::Player, payoff::AbstractJuMPScalar)
