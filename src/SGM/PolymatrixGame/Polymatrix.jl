@@ -50,6 +50,7 @@ function compute_bilateral_payoff(Π::QuadExpr, v_bar_p::AssignmentDict, v_bar_k
 
     return mixed_components + other_components + compute_others_payoff(Π.aff, v_bar_k)
 end
+compute_bilateral_payoff(Π::AffExpr, v_bar_p::AssignmentDict, v_bar_k::AssignmentDict)::Float64 = compute_bilateral_payoff(QuadExpr(Π), v_bar_p, v_bar_k)
 
 function compute_bilateral_payoff(p::Player, x_p::PureStrategy, k::Player, x_k::PureStrategy)
     # In fact, +1 for having Dict{VariableRef, Number} as the standard for assignments
