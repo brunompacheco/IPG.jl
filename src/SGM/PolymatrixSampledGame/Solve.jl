@@ -9,7 +9,7 @@ function polymatrix_to_NG_std(polymatrix::Polymatrix, players::Vector{Player})::
     )
 end
 
-function discrete_profile_from_NE(NE_mixed::Vector{Vector{Float64}}, S_X::Dict{Player, Vector{PureStrategy}})::Profile{DiscreteMixedStrategy}
+function discrete_profile_from_NE(NE_mixed::Vector{Vector{Float64}}, S_X::Sample{PureStrategy})::Profile{DiscreteMixedStrategy}
     players = collect(keys(S_X))
     NE_probs = Dict(p => probs for (p, probs) in zip(players, NE_mixed))
 
@@ -75,8 +75,8 @@ The current implementations are interfaces for the solution methods in `NormalGa
 
 # Examples
 ```julia
-IPG.solve = IPG.solve_PNS
+IPG.solve_polymatrix_game = IPG.solve_PNS
 ```
 """
-solve = solve_PNS  # default value
-public solve, solve_PNS, solve_Sandholm1
+solve_polymatrix_game = solve_PNS  # default value
+public solve_polymatrix_game, solve_PNS, solve_Sandholm1

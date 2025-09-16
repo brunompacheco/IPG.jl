@@ -1,6 +1,5 @@
 
-# include("SampledGame/SampledGame.jl")  # TODO: refactor polymatrix out of sampled game. SampledGame now is a simple const
-include("PolymatrixGame/PolymatrixGame.jl")
+include("SampledGame.jl")
 include("PlayerOrder.jl")
 include("DeviationReaction.jl")
 include("Initialization.jl")
@@ -42,7 +41,7 @@ function SGM(players::Vector{Player}, optimizer_factory;
     # solved
 
     S_X = initialize_strategies(players)
-    sampled_game = PolymatrixSampledGame(players, S_X)
+    sampled_game = SampledGame(S_X)
     verbose && println("Game initialized with strategies: ", S_X)
 
     Σ_S = Vector{Profile{DiscreteMixedStrategy}}()  # candidate equilibria

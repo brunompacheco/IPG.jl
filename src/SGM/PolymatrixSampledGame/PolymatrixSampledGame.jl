@@ -2,14 +2,14 @@
 include("Polymatrix.jl")
 
 "Normal-form polymatrix representation of the sampled game."
-mutable struct PolymatrixSampledGame
-    S_X::Dict{Player, Vector{PureStrategy}}  # sample of strategies (finite subset of the strategy space X)
+mutable struct PolymatrixSampledGame <: AbstractSampledGame
+    "Sample of strategies (finite subset of the strategy space X)."
+    S_X::Sample{PureStrategy}
     polymatrix::Polymatrix
 end
 
-# TODO: since S_X is a Dict{Player, ...}, we don't need to pass the players anymore
-function PolymatrixSampledGame(players::Vector{Player}, S_X::Dict{Player, Vector{PureStrategy}})
-    return PolymatrixSampledGame(S_X, get_polymatrix(players, S_X))
+function PolymatrixSampledGame(S_X::Sample{PureStrategy})
+    return PolymatrixSampledGame(S_X, get_polymatrix(S_X))
 end
 
 # TODO: maybe each Strategy should have a pointer to the player it belongs to?
