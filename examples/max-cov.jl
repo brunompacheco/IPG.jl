@@ -14,10 +14,10 @@ def load_pickle(fpath):
 load_pickle = py"load_pickle"
 
 # these parameters must match those in the csv file name, and the folder from which they are downloaded
-type_dataset = "single"
-county_size = 2
+type_dataset = "multi"
+county_size = 5
 num_lakes_per_county = 50
-budget_ratio = 0.3
+budget_ratio = 0.5
 
 dirname = "EBMC_generated/$(type_dataset)_dataset/"
 fname = "$(county_size)_$(num_lakes_per_county)_$(budget_ratio).csv"
