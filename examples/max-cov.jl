@@ -96,22 +96,18 @@ players = [Player(name=county) for county in counties]
 
 # add variables
 x_c = Dict(p => @variable(p.X, [I_c[p.name]], Bin, base_name="x_$(p.name)_") for p in players)
-y_c = Dict(p => @variable(p.X, [arcs_minus_c[p.name]], Bin, base_name="y_$(p.name)_") for p in players)
 
 # concatenate x variables
 x = Containers.DenseAxisArray(vcat([x_c[p].data for p in players]...), vcat([x_c[p].axes[1] for p in players]...))
 
+y = Dict(arc => x[arc[1]] + x[arc[2]] for arc in arcs)  # auxiliary variable for convenience
+
 for p in players
     ### add constraints
-    # TODO: x[arc[i]] may be a variable from another player; need to translate the index
-    # before using in @constraint. This is a limitation of our implementation, that I am
-    # currently handling with the internalize_expr method. Ideally, we would have the macro
-    # overwritten so that the internalization is automatic.
-    @constraint(p.X, [arc in arcs_minus_c[p.name]], y_c[p][arc] <= IPG.internalize_expr(p, x[arc[1]] + x[arc[2]]))
     @constraint(p.X, sum(x_c[p]) <= county_budget[p.name])
 
     ### set payoff
-    set_payoff!(p, sum(t[arc] * n[arc] * y_c[p][arc] for arc in arcs_minus_c[p.name]))
+    set_payoff!(p, sum(t[arc] * n[arc] * y[arc] for arc in arcs_minus_c[p.name]))
 end
 
 Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=10, verbose=true)
