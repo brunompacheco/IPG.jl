@@ -15,20 +15,26 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 NormalGames = {rev = "optimizer-agnosticism", url = "https://github.com/mxmmargarida/Normal-form-games"}
 
 [compat]
+CSV = "0.10.15"
+DataFrames = "1.8.0"
 IterTools = "1.10.0"
 JSON3 = "1.14.1"
 JuMP = "1.23.6"
 LinearAlgebra = "1.11.0"
+PyCall = "1.96.4"
 Random = "1.11.0"
 Test = "1.11.0"
 TestItemRunner = "1.1.0"
 TestItems = "1.0.0"
 
 [extras]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 SCIP = "82193955-e24f-5292-bf16-6f2c5261a85f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [targets]
-test = ["Test", "SCIP", "TestItems", "TestItemRunner"]
+test = ["Test", "SCIP", "TestItems", "TestItemRunner", "CSV", "DataFrames", "PyCall"]

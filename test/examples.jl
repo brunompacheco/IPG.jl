@@ -52,3 +52,25 @@ end
 
     @test length(payoff_improvements) <= length(Σ)
 end
+
+@testitem "Example Selfish EBMC" begin
+    using Downloads
+
+    url = "https://raw.githubusercontent.com/HyunwooLee0429/Best-response-dynamics-IPG/main/BZR_EBMC/EBMC_generated/single_dataset/2_50_0.3.csv"
+    target_dir = joinpath(@__DIR__, "..", "examples", "EBMC_generated", "single_dataset")
+    mkpath(target_dir)
+    target_file = joinpath(target_dir, "2_50_0.3.csv")
+
+    if !isfile(target_file)
+        try
+            Downloads.download(url, target_file)
+        catch e
+            @warn "Could not download EBMC CSV" exception = e url = url
+        end
+    end
+
+    include("../examples/ebmc.jl")
+
+    # POS has to be >= 1
+    @test objective_value(model_sw) / sw_ne >= 1.0
+end
