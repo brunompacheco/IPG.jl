@@ -1,3 +1,14 @@
+"""
+Edge-weighted Budgeted Maximum Coverage (EBMC).
+
+Based on the selfish game introduced by Lee et al. (2025). For further details, see:
+    [*H. Lee, R. Hildebrand, W. Cai, I. E. B. Toy, "Best-Response Dynamics for Large-Scale Integer Programming Games with Applications to Aquatic Invasive Species Prevention". 2025. Preprint*](https://optimization-online.org/?p=30871)
+
+# Notes
+- The generated instances have to be placed in `examples/EBMC_generated`, following the folder structure of the [authors' code repository](https://github.com/HyunwooLee0429/Best-response-dynamics-IPG).
+- Which instance is solved depends on the choice of parameters.
+"""
+
 using CSV
 using DataFrames
 using PyCall
@@ -14,16 +25,16 @@ def load_pickle(fpath):
 load_pickle = py"load_pickle"
 
 # these parameters must match those in the csv file name, and the folder from which they are downloaded
-type_dataset = "multi"
-county_size = 5
+type_dataset = "single"
+county_size = 2
 num_lakes_per_county = 50
-budget_ratio = 0.5
+budget_ratio = 0.3
 
-dirname = "EBMC_generated/$(type_dataset)_dataset/"
+dir = joinpath(@__DIR__, "EBMC_generated", "$(type_dataset)_dataset")
 fname = "$(county_size)_$(num_lakes_per_county)_$(budget_ratio).csv"
-df_edge = DataFrame(CSV.File(dirname * fname))
+df_edge = DataFrame(CSV.File(joinpath(dir, fname)))
 
-info_data = load_pickle(dirname * "info_data.pickle")
+info_data = load_pickle(joinpath(dir, "info_data.pickle"))
 
 # === Unpack Experiment Settings === #
 # extract the value list for the (county_size, num_lakes_per_county, budget_ratio) key
@@ -86,32 +97,87 @@ for county in counties
     arcs_minus_c[county] = [arc for arc in arcs if (arc[1][1:2] == county) && (arc[2][1:2] != county)]
 end
 
-# === Define and Solve SELFISH Game using IPG.jl === #
 
-using IPG, SCIP
-using IPG.JuMP: Containers
+# === Solve the Social Welfare Model === #
+using IPG.JuMP, SCIP
+
+model_sw = Model(SCIP.Optimizer)
+set_silent(model_sw)
+@variable(model_sw, x_sw[I], Bin)
+@variable(model_sw, y_sw[arcs], Bin)  # auxiliary variable for convenience
+@constraint(model_sw, [arc in arcs], y_sw[arc] <= x_sw[arc[1]] + x_sw[arc[2]])
+@constraint(model_sw, [county in counties], sum(x_sw[i] for i in I_c[county]) <= county_budget[county])
+
+@objective(model_sw, Max, sum(t[arc] * n[arc] * y_sw[arc] for arc in arcs))
+
+optimize!(model_sw)
+
+println("Optimal Social Welfare: ", objective_value(model_sw))
+osw_val = value.(x_sw)
+
+
+# === Define and Solve SELFISH Game using IPG.jl === #
+using IPG
+IPG.initialize_strategies = IPG.initialize_strategies_player_alone
+IPG.solve = IPG.solve_Sandholm1
 
 # define players
 players = [Player(name=county) for county in counties]
 
 # add variables
 x_c = Dict(p => @variable(p.X, [I_c[p.name]], Bin, base_name="x_$(p.name)_") for p in players)
-y_c = Dict(p => @variable(p.X, [arcs_minus_c[p.name]], Bin, base_name="y_$(p.name)_") for p in players)
 
 # concatenate x variables
 x = Containers.DenseAxisArray(vcat([x_c[p].data for p in players]...), vcat([x_c[p].axes[1] for p in players]...))
 
+# warm start from social welfare solution
+# for i in lakes
+#     set_start_value(x[i], value(x_sw[i]))
+# end
+
+# y_ij = x_i ∨ xj
+# The following formula implements logical OR for binary variables:
+# y_ij = x_i ∨ x_j = x_i + x_j - x_i * x_j (algebraic equivalent for binary variables)
+y = Dict(arc => x[arc[1]] + x[arc[2]] - x[arc[1]] * x[arc[2]] for arc in arcs)  # auxiliary variable for convenience
+
 for p in players
     ### add constraints
-    # TODO: x[arc[i]] may be a variable from another player; need to translate the index
-    # before using in @constraint. This is a limitation of our implementation, that I am
-    # currently handling with the internalize_expr method. Ideally, we would have the macro
-    # overwritten so that the internalization is automatic.
-    @constraint(p.X, [arc in arcs_minus_c[p.name]], y_c[p][arc] <= IPG.internalize_expr(p, x[arc[1]] + x[arc[2]]))
     @constraint(p.X, sum(x_c[p]) <= county_budget[p.name])
 
     ### set payoff
-    set_payoff!(p, sum(t[arc] * n[arc] * y_c[p][arc] for arc in arcs_minus_c[p.name]))
+    set_payoff!(p, sum(t[arc] * n[arc] * y[arc] for arc in arcs_minus_c[p.name]))
 end
 
 Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=10, verbose=true)
+σ_ne = Σ[end]
+
+# compute social welfare
+function social_welfare(x_c_val)
+    x_val = Dict(I_c[p.name][i] => x_c_val[p][i] for p in players for i in eachindex(I_c[p.name]))
+
+    y_val = Dict(arc => x_val[arc[1]] + x_val[arc[2]] - x_val[arc[1]] * x_val[arc[2]] for arc in arcs)
+
+    sw = 0
+    for arc in arcs
+        sw += t[arc] * n[arc] * y_val[arc]
+    end
+
+    return sw
+end
+
+if all(length(σ_ne[p].probs) == 1 for p in players)
+    println("Pure NE found.")
+
+    x_ne = first(IPG.support(σ_ne))
+
+    sw_ne = social_welfare(x_ne)
+    println("PNE social welfare: ", sw_ne)
+    println("POS: ", objective_value(model_sw) / sw_ne)
+else
+    sw_ne = expected_value(social_welfare, σ_ne)
+
+    println("Expected social welfare from MNE: ", sw_ne)
+    println("POS: ", objective_value(model_sw) / sw_ne)
+
+    error("Mixed strategy NE found!")
+end
