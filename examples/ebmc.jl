@@ -136,6 +136,8 @@ x = Containers.DenseAxisArray(vcat([x_c[p].data for p in players]...), vcat([x_c
 # end
 
 # y_ij = x_i ∨ xj
+# The following formula implements logical OR for binary variables:
+# y_ij = x_i ∨ x_j = x_i + x_j - x_i * x_j (algebraic equivalent for binary variables)
 y = Dict(arc => x[arc[1]] + x[arc[2]] - x[arc[1]] * x[arc[2]] for arc in arcs)  # auxiliary variable for convenience
 
 for p in players
