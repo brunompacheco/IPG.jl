@@ -1,3 +1,14 @@
+"""
+Edge-weighted Budgeted Maximum Coverage (EBMC).
+
+Based on the selfish game introduced by Lee et al. (2025). For further details, see:
+    [*H. Lee, R. Hildebrand, W. Cai, I. E. B. Toy, "Best-Response Dynamics for Large-Scale Integer Programming Games with Applications to Aquatic Invasive Species Prevention". 2025. Preprint*](https://optimization-online.org/?p=30871)
+
+# Notes
+- The generated instances have to be placed in `examples/EBMC_generated`, following the folder structure of the [authors' code repository](https://github.com/HyunwooLee0429/Best-response-dynamics-IPG).
+- Which instance is solved depends on the choice of parameters.
+"""
+
 using CSV
 using DataFrames
 using PyCall
@@ -19,11 +30,11 @@ county_size = 2
 num_lakes_per_county = 50
 budget_ratio = 0.3
 
-dirname = "EBMC_generated/$(type_dataset)_dataset/"
+dir = joinpath(@__DIR__, "EBMC_generated", "$(type_dataset)_dataset")
 fname = "$(county_size)_$(num_lakes_per_county)_$(budget_ratio).csv"
-df_edge = DataFrame(CSV.File(dirname * fname))
+df_edge = DataFrame(CSV.File(joinpath(dir, fname)))
 
-info_data = load_pickle(dirname * "info_data.pickle")
+info_data = load_pickle(joinpath(dir, "info_data.pickle"))
 
 # === Unpack Experiment Settings === #
 # extract the value list for the (county_size, num_lakes_per_county, budget_ratio) key
@@ -107,6 +118,8 @@ osw_val = value.(x_sw)
 
 # === Define and Solve SELFISH Game using IPG.jl === #
 using IPG
+IPG.initialize_strategies = IPG.initialize_strategies_player_alone
+IPG.solve = IPG.solve_Sandholm1
 
 # define players
 players = [Player(name=county) for county in counties]
@@ -159,10 +172,10 @@ if all(length(σ_ne[p].probs) == 1 for p in players)
     println("PNE social welfare: ", sw_ne)
     println("POS: ", objective_value(model_sw) / sw_ne)
 else
-    expected_social_welfare = expected_value(social_welfare, σ_ne)
+    sw_ne = expected_value(social_welfare, σ_ne)
 
-    println("Expected social welfare from MNE: ", expected_social_welfare)
-    println("POS: ", objective_value(model_sw) / expected_social_welfare)
+    println("Expected social welfare from MNE: ", sw_ne)
+    println("POS: ", objective_value(model_sw) / sw_ne)
 
     error("Mixed strategy NE found!")
 end
