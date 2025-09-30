@@ -14,10 +14,10 @@ def load_pickle(fpath):
 load_pickle = py"load_pickle"
 
 # these parameters must match those in the csv file name, and the folder from which they are downloaded
-type_dataset = "multi"
-county_size = 5
+type_dataset = "single"
+county_size = 2
 num_lakes_per_county = 50
-budget_ratio = 0.5
+budget_ratio = 0.3
 
 dirname = "EBMC_generated/$(type_dataset)_dataset/"
 fname = "$(county_size)_$(num_lakes_per_county)_$(budget_ratio).csv"
@@ -86,10 +86,27 @@ for county in counties
     arcs_minus_c[county] = [arc for arc in arcs if (arc[1][1:2] == county) && (arc[2][1:2] != county)]
 end
 
-# === Define and Solve SELFISH Game using IPG.jl === #
 
-using IPG, SCIP
-using IPG.JuMP: Containers
+# === Solve the Social Welfare Model === #
+using IPG.JuMP, SCIP
+
+model_sw = Model(SCIP.Optimizer)
+set_silent(model_sw)
+@variable(model_sw, x_sw[I], Bin)
+@variable(model_sw, y_sw[arcs], Bin)  # auxiliary variable for convenience
+@constraint(model_sw, [arc in arcs], y_sw[arc] <= x_sw[arc[1]] + x_sw[arc[2]])
+@constraint(model_sw, [county in counties], sum(x_sw[i] for i in I_c[county]) <= county_budget[county])
+
+@objective(model_sw, Max, sum(t[arc] * n[arc] * y_sw[arc] for arc in arcs))
+
+optimize!(model_sw)
+
+println("Optimal Social Welfare: ", objective_value(model_sw))
+osw_val = value.(x_sw)
+
+
+# === Define and Solve SELFISH Game using IPG.jl === #
+using IPG
 
 # define players
 players = [Player(name=county) for county in counties]
@@ -100,7 +117,13 @@ x_c = Dict(p => @variable(p.X, [I_c[p.name]], Bin, base_name="x_$(p.name)_") for
 # concatenate x variables
 x = Containers.DenseAxisArray(vcat([x_c[p].data for p in players]...), vcat([x_c[p].axes[1] for p in players]...))
 
-y = Dict(arc => x[arc[1]] + x[arc[2]] for arc in arcs)  # auxiliary variable for convenience
+# warm start from social welfare solution
+# for i in lakes
+#     set_start_value(x[i], value(x_sw[i]))
+# end
+
+# y_ij = x_i ∨ xj
+y = Dict(arc => x[arc[1]] + x[arc[2]] - x[arc[1]] * x[arc[2]] for arc in arcs)  # auxiliary variable for convenience
 
 for p in players
     ### add constraints
@@ -111,3 +134,35 @@ for p in players
 end
 
 Σ, payoff_improvements = SGM(players, SCIP.Optimizer, max_iter=10, verbose=true)
+σ_ne = Σ[end]
+
+# compute social welfare
+function social_welfare(x_c_val)
+    x_val = Dict(I_c[p.name][i] => x_c_val[p][i] for p in players for i in eachindex(I_c[p.name]))
+
+    y_val = Dict(arc => x_val[arc[1]] + x_val[arc[2]] - x_val[arc[1]] * x_val[arc[2]] for arc in arcs)
+
+    sw = 0
+    for arc in arcs
+        sw += t[arc] * n[arc] * y_val[arc]
+    end
+
+    return sw
+end
+
+if all(length(σ_ne[p].probs) == 1 for p in players)
+    println("Pure NE found.")
+
+    x_ne = first(IPG.support(σ_ne))
+
+    sw_ne = social_welfare(x_ne)
+    println("PNE social welfare: ", sw_ne)
+    println("POS: ", objective_value(model_sw) / sw_ne)
+else
+    expected_social_welfare = expected_value(social_welfare, σ_ne)
+
+    println("Expected social welfare from MNE: ", expected_social_welfare)
+    println("POS: ", objective_value(model_sw) / expected_social_welfare)
+
+    error("Mixed strategy NE found!")
+end
